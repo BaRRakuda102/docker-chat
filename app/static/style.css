@@ -1,0 +1,1071 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'SF Pro Text', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: linear-gradient(135deg, #0a1a0a 0%, #000000 100%);
+    height: 100vh;
+    overflow: hidden;
+    backdrop-filter: blur(0px);
+}
+
+/* Современная цветовая схема в стиле macOS */
+:root {
+    --glass-bg: rgba(26, 58, 26, 0.25);
+    --glass-border: rgba(58, 140, 58, 0.3);
+    --glass-hover: rgba(58, 140, 58, 0.15);
+    --accent: #3a8c3a;
+    --accent-glow: #4aac4a;
+    --text-primary: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --text-dim: rgba(255, 255, 255, 0.4);
+    --blur-amount: 20px;
+}
+
+/* Стили для всех кнопок */
+button, .room-card, .room-item, .primary-btn, .create-room-btn, .new-chat-btn {
+    border-radius: 16px !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button:hover, .room-card:hover, .room-item:hover {
+    transform: scale(0.98) translateY(-1px);
+    backdrop-filter: blur(12px);
+}
+
+/* Экран авторизации */
+.auth-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: radial-gradient(circle at 20% 50%, rgba(26, 58, 26, 0.3) 0%, #000000 100%);
+}
+
+.auth-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-amount));
+    border-radius: 32px;
+    padding: 50px;
+    text-align: center;
+    width: 380px;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logo i {
+    font-size: 64px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 20px rgba(58, 140, 58, 0.5));
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.logo h1 {
+    color: var(--text-primary);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.auth-card input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-size: 15px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.auth-card input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(58, 140, 58, 0.1);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.primary-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-glow) 100%);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(58, 140, 58, 0.3);
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(58, 140, 58, 0.4);
+}
+
+/* Экран выбора комнат */
+.rooms-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: radial-gradient(circle at 70% 30%, rgba(26, 58, 26, 0.2) 0%, #000000 100%);
+}
+
+.rooms-container {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur-amount));
+    border-radius: 32px;
+    padding: 40px;
+    width: 85%;
+    max-width: 900px;
+    border: 1px solid var(--glass-border);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.rooms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.rooms-header h2 {
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.create-room-btn {
+    background: rgba(58, 140, 58, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 12px 24px;
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.create-room-btn:hover {
+    background: rgba(58, 140, 58, 0.3);
+    border-color: var(--accent);
+}
+
+.rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.room-card {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.room-card:hover {
+    background: rgba(58, 140, 58, 0.15);
+    border-color: var(--accent);
+    transform: translateY(-4px);
+}
+
+.room-card i {
+    font-size: 40px;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+.room-card h4 {
+    color: var(--text-primary);
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+.room-card p {
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+/* Модальное окно */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: rgba(13, 31, 13, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px;
+    width: 380px;
+    border: 1px solid var(--glass-border);
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.modal-header h3 {
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Основной чат - macOS стиль */
+.chat-app {
+    display: flex;
+    height: 100vh;
+    backdrop-filter: blur(0px);
+}
+
+/* Левая панель */
+.sidebar {
+    width: 300px;
+    background: rgba(13, 31, 13, 0.7);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.user-profile i {
+    font-size: 40px;
+    color: var(--accent);
+    filter: drop-shadow(0 2px 8px rgba(58, 140, 58, 0.3));
+}
+
+.logout-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    padding: 10px;
+    border-radius: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    transition: all 0.2s;
+}
+
+.logout-btn:hover {
+    background: rgba(139, 58, 58, 0.3);
+    color: #ff6b6b;
+    transform: scale(0.95);
+}
+
+.rooms-list {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.rooms-title {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    padding-left: 12px;
+}
+
+.room-item {
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    border-radius: 14px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.room-item:hover {
+    background: rgba(58, 140, 58, 0.15);
+    color: var(--text-primary);
+    transform: translateX(4px);
+}
+
+.room-item.active {
+    background: linear-gradient(135deg, rgba(58, 140, 58, 0.25) 0%, rgba(74, 172, 74, 0.15) 100%);
+    color: var(--accent);
+    border: 1px solid var(--glass-border);
+}
+
+.new-chat-btn {
+    margin: 20px;
+    padding: 14px;
+    background: rgba(58, 140, 58, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.new-chat-btn:hover {
+    background: rgba(58, 140, 58, 0.3);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+/* Онлайн-пользователи */
+.online-users {
+    padding: 20px;
+    border-top: 1px solid var(--glass-border);
+    margin-top: auto;
+}
+
+.online-users h3 {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.users-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.user-item {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.user-item:hover {
+    background: rgba(58, 140, 58, 0.2);
+    color: var(--text-primary);
+}
+
+.user-item i {
+    color: var(--accent);
+    font-size: 16px;
+}
+
+/* Основная область чата */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.chat-header {
+    padding: 20px 30px;
+    background: rgba(13, 31, 13, 0.5);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.room-title {
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.room-title i {
+    color: var(--accent);
+    font-size: 20px;
+}
+
+.room-info {
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+/* Сообщения - УЛУЧШЕННЫЕ СТИЛИ */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* Уменьшено расстояние между сообщениями */
+}
+
+.message {
+    display: flex;
+    flex-direction: column;
+    animation: messageSlideIn 0.3s ease-out;
+    width: 100%;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.username {
+    font-weight: 700; /* Жирный шрифт */
+    font-size: 15px; /* Увеличен размер шрифта */
+    letter-spacing: -0.2px;
+}
+
+.timestamp {
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.message-text {
+    background: rgba(26, 58, 26, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 8px 14px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.45;
+    border: 1px solid var(--glass-border);
+    display: inline-block;
+    max-width: fit-content;
+    width: auto;
+}
+
+.system-message {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-style: italic;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 20px;
+    margin: 4px auto;
+    width: fit-content;
+    backdrop-filter: blur(4px);
+}
+
+.image-message {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.image-message img {
+    max-width: 300px;
+    max-height: 200px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 1px solid var(--glass-border);
+}
+
+.image-message img:hover {
+    transform: scale(1.02);
+}
+
+.image-caption {
+    background: rgba(26, 58, 26, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 6px 12px;
+    border-radius: 12px;
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: inline-block;
+}
+
+/* Стили для упоминаний */
+.mention {
+    color: var(--accent);
+    background: rgba(58, 140, 58, 0.25);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Стили для реакций */
+.message-reactions {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.reactions-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.reaction-btn {
+    background: rgba(58, 140, 58, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reaction-btn:hover {
+    background: rgba(58, 140, 58, 0.3);
+    transform: scale(1.05);
+}
+
+/* Попап с эмодзи */
+.emoji-picker-popup {
+    position: absolute;
+    background: rgba(13, 31, 13, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    max-width: 250px;
+    z-index: 1000;
+    margin-top: 5px;
+}
+
+.emoji-option {
+    background: rgba(58, 140, 58, 0.2);
+    border: none;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.emoji-option:hover {
+    background: rgba(58, 140, 58, 0.4);
+    transform: scale(1.1);
+}
+
+/* Индикатор редактирования */
+.edit-indicator {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: 8px;
+}
+
+.edit-indicator-bar {
+    background: rgba(58, 140, 58, 0.2);
+    backdrop-filter: blur(10px);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.edit-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.edit-content i {
+    color: var(--accent);
+}
+
+.cancel-edit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 8px;
+    margin-left: auto;
+}
+
+.cancel-edit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Индикатор ответа */
+.reply-indicator {
+    background: rgba(58, 140, 58, 0.2);
+    backdrop-filter: blur(10px);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.reply-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.reply-content i {
+    color: var(--accent);
+}
+
+.cancel-reply-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 8px;
+    margin-left: auto;
+}
+
+.cancel-reply-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Предпросмотр ответа в сообщении */
+.reply-preview {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.reply-preview i {
+    color: var(--accent);
+    margin-right: 6px;
+    font-size: 10px;
+}
+
+/* Кнопки действий */
+.message-actions {
+    margin-top: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    gap: 6px;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: rgba(58, 140, 58, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: rgba(58, 140, 58, 0.4);
+    color: var(--accent);
+    transform: scale(0.98);
+}
+
+/* Область ввода сообщения */
+.input-container {
+    padding: 20px 30px;
+    background: rgba(13, 31, 13, 0.5);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+}
+
+.input-tools {
+    margin-bottom: 12px;
+    display: flex;
+    gap: 10px;
+}
+
+.tool-btn {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 10px 14px;
+    border-radius: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+}
+
+.tool-btn:hover {
+    background: rgba(58, 140, 58, 0.2);
+    color: var(--accent);
+    transform: scale(0.98);
+}
+
+.input-wrapper {
+    display: flex;
+    gap: 12px;
+}
+
+.input-wrapper input {
+    flex: 1;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.input-wrapper input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(58, 140, 58, 0.1);
+}
+
+.input-wrapper button {
+    padding: 14px 28px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-glow) 100%);
+    border: none;
+    border-radius: 24px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.input-wrapper button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(58, 140, 58, 0.3);
+}
+
+/* Индикатор загрузки файла */
+.upload-preview {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    background: rgba(13, 31, 13, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 12px 20px;
+    color: var(--text-primary);
+    font-size: 14px;
+    z-index: 1000;
+    animation: slideInRight 0.3s;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Модальное окно для изображений */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    justify-content: center;
+    align-items: center;
+}
+
+.image-modal-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.image-modal-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.image-modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: white;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.image-modal-close:hover {
+    color: var(--accent);
+}
+
+.clickable-image {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.clickable-image:hover {
+    transform: scale(1.02);
+}
+
+/* Скроллбар в стиле macOS */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(58, 140, 58, 0.4);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(58, 140, 58, 0.6);
+}
+/* Панель выбора смайликов в поле ввода */
+.message-emoji-picker {
+    position: absolute;
+    bottom: 80px;
+    left: 20px;
+    background: rgba(13, 31, 13, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 12px;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.emoji-grid .emoji-option {
+    background: rgba(58, 140, 58, 0.2);
+    border: none;
+    border-radius: 10px;
+    padding: 8px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.emoji-grid .emoji-option:hover {
+    background: rgba(58, 140, 58, 0.4);
+    transform: scale(1.1);
+}
+
+.input-container {
+    position: relative;
+}
+/* Адаптивность */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 80px;
+    }
+    
+    .sidebar .user-profile span,
+    .sidebar .rooms-title,
+    .sidebar .room-item span,
+    .sidebar .new-chat-btn span,
+    .online-users h3,
+    .users-list span {
+        display: none;
+    }
+    
+    .room-item {
+        justify-content: center;
+        padding: 12px;
+    }
+    
+    .new-chat-btn {
+        justify-content: center;
+    }
+    
+    .message-text {
+        max-width: 85%;
+    }
+    
+    .messages {
+        padding: 15px;
+        gap: 6px;
+    }
+    
+    .username {
+        font-size: 14px;
+    }
+}

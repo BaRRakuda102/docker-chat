@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domeshek CHAT | Secure Messenger</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Экран входа -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="logo">
+                <i class="fas fa-lock"></i>
+                <h1>Domeshek CHAT</h1>
+                <p>Go попиздим?</p>
+            </div>
+            <input type="text" id="username" placeholder="Ваше имя" maxlength="20">
+            <button onclick="showRooms()" class="primary-btn">
+                <i class="fas fa-sign-in-alt"></i> Продолжить
+            </button>
+        </div>
+    </div>
+
+    <!-- Экран выбора комнаты -->
+    <div class="rooms-screen" id="roomsScreen" style="display: none;">
+        <div class="rooms-container">
+            <div class="rooms-header">
+                <h2><i class="fas fa-comments"></i> Комнаты</h2>
+                <button onclick="showCreateRoom()" class="create-room-btn">
+                    <i class="fas fa-plus"></i> Создать чат
+                </button>
+            </div>
+            <div id="roomsList" class="rooms-grid"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно создания комнаты -->
+    <div class="modal" id="createRoomModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-lock"></i> Создать чат</h3>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <input type="text" id="newRoomName" placeholder="Название комнаты">
+            <input type="password" id="newRoomPassword" placeholder="Пароль комнаты">
+            <button onclick="createRoom()" class="primary-btn">Создать</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно входа в комнату -->
+    <div class="modal" id="joinRoomModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-door-open"></i> Вход в чат</h3>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <p id="joinRoomName"></p>
+            <input type="password" id="roomPassword" placeholder="Введите пароль">
+            <button onclick="joinRoom()" class="primary-btn">Войти</button>
+        </div>
+    </div>
+
+    <!-- Основной чат -->
+    <div class="chat-app" id="chatApp" style="display: none;">
+        <!-- Левая панель с комнатами -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="currentUser"></span>
+                </div>
+                <button onclick="logout()" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+            
+            <div class="rooms-list" id="sidebarRooms">
+                <div class="rooms-title">
+                    <i class="fas fa-hashtag"></i> Комнаты
+                </div>
+                <div id="roomsSidebar"></div>
+            </div>
+            
+            <button onclick="showCreateRoom()" class="new-chat-btn">
+                <i class="fas fa-plus-circle"></i> Новый чат
+            </button>
+        </div>
+
+        <!-- Основная область чата -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="room-title">
+                    <i class="fas fa-hashtag"></i>
+                    <span id="currentRoom"></span>
+                </div>
+                <div class="room-info">
+                    <i class="fas fa-users"></i>
+                    <span id="userCount">0</span>
+                </div>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+            <div class="input-container">
+                <div class="input-tools">
+    <button onclick="toggleMessageEmojiPicker()" class="tool-btn" id="emojiPickerBtn">
+        <i class="far fa-smile-wink"></i>
+    </button>
+    <button onclick="document.getElementById('imageInput').click()" class="tool-btn">
+        <i class="fas fa-image"></i>
+    </button>
+    <input type="file" id="imageInput" accept="image/*" style="display: none">
+</div>
+                </div>
+                <div class="input-wrapper">
+    <input type="text" id="messageInput" placeholder="Введите сообщение... (используйте @ для упоминаний)" onkeypress="handleKeyPress(event)">
+    <button onclick="sendMessage()">
+        <i class="fas fa-paper-plane"></i>
+    </button>
+</div>
+<div id="messageEmojiPicker" class="message-emoji-picker" style="display: none;">
+    <div class="emoji-grid">
+        <button class="emoji-option" onclick="insertEmoji('😀')">😀</button>
+        <button class="emoji-option" onclick="insertEmoji('😂')">😂</button>
+        <button class="emoji-option" onclick="insertEmoji('❤️')">❤️</button>
+        <button class="emoji-option" onclick="insertEmoji('👍')">👍</button>
+        <button class="emoji-option" onclick="insertEmoji('🎉')">🎉</button>
+        <button class="emoji-option" onclick="insertEmoji('😢')">😢</button>
+        <button class="emoji-option" onclick="insertEmoji('😡')">😡</button>
+        <button class="emoji-option" onclick="insertEmoji('😎')">😎</button>
+        <button class="emoji-option" onclick="insertEmoji('🥰')">🥰</button>
+        <button class="emoji-option" onclick="insertEmoji('🤣')">🤣</button>
+        <button class="emoji-option" onclick="insertEmoji('😍')">😍</button>
+        <button class="emoji-option" onclick="insertEmoji('😱')">😱</button>
+        <button class="emoji-option" onclick="insertEmoji('😭')">😭</button>
+        <button class="emoji-option" onclick="insertEmoji('🤔')">🤔</button>
+        <button class="emoji-option" onclick="insertEmoji('🙏')">🙏</button>
+        <button class="emoji-option" onclick="insertEmoji('👏')">👏</button>
+        <button class="emoji-option" onclick="insertEmoji('🔥')">🔥</button>
+        <button class="emoji-option" onclick="insertEmoji('✨')">✨</button>
+        <button class="emoji-option" onclick="insertEmoji('⭐')">⭐</button>
+        <button class="emoji-option" onclick="insertEmoji('💯')">💯</button>
+    </div>
+</div>
+
+    <audio id="notificationSound">
+        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
