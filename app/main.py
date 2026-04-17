@@ -10,7 +10,6 @@ from pathlib import Path
 
 app = FastAPI()
 
-# Добавляем CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,23 +18,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Создаём папки
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Хранилище в памяти
 rooms_data = {}
 rooms_list = set()
 room_messages = {}
 room_users = {}
+room_keys = {}  # Хранилище ключей комнат
 active_connections: Dict[str, Set[WebSocket]] = {}
 user_rooms: Dict[WebSocket, Dict] = {}
 
 class ChatRoom:
-    async def create_room(self, room_name: str, password: str, creator: str):
+    async def create_room(self, room_name: str, password: str, creator: str, room_key: str = None):
         if room_name in rooms_list:
             return False, "Комната уже существует"
         
@@ -49,6 +47,9 @@ class ChatRoom:
         rooms_list.add(room_name)
         room_messages[room_name] = []
         room_users[room_name] = set()
+        
+        if room_key:
+            room_keys[room_name] = room_key
         
         return True, "Комната создана"
     
@@ -97,6 +98,14 @@ class ChatRoom:
         )
         
         await self.send_user_list(room)
+        
+        # Отправляем ключ комнаты новому пользователю (если есть)
+        if room in room_keys:
+            await websocket.send_json({
+                "type": "room_key",
+                "key": room_keys[room]
+            })
+        
         print(f"✅ {username} подключился к комнате {room}")
         return True
     
@@ -168,20 +177,21 @@ async def create_room(data: dict):
         room_name = data.get("name", "").strip().lower().replace(" ", "_")
         password = data.get("password", "")
         creator = data.get("creator", "")
+        room_key = data.get("room_key", "")
         
-        print(f"📝 Создание комнаты: {room_name} пользователем {creator}")
+        print(f"📝 Создание комнаты: {room_name}")
         
         if not room_name or not password:
             return {"success": False, "error": "Название и пароль обязательны"}
         
-        success, message = await chat_room.create_room(room_name, password, creator)
+        success, message = await chat_room.create_room(room_name, password, creator, room_key)
         if success:
             print(f"✅ Комната {room_name} создана")
         else:
             print(f"❌ Ошибка: {message}")
         return {"success": success, "room": room_name if success else None, "error": message if not success else None}
     except Exception as e:
-        print(f"❌ Ошибка создания комнаты: {e}")
+        print(f"❌ Ошибка: {e}")
         return {"success": False, "error": str(e)}
 
 @app.post("/api/join_room")
@@ -290,6 +300,28 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
                         })
                         break
             
+            elif message_data["type"] == "encrypted_message":
+                encrypted_message = {
+                    "id": hashlib.md5(f"{datetime.now()}{username}{message_data['encrypted']}".encode()).hexdigest(),
+                    "type": "encrypted_message",
+                    "username": username,
+                    "encrypted": message_data["encrypted"],
+                    "timestamp": datetime.now().strftime("%H:%M"),
+                    "user_id": user_id
+                }
+                
+                if "reply_to" in message_data and message_data["reply_to"]:
+                    encrypted_message["reply_to"] = message_data["reply_to"]
+                
+                if room not in room_messages:
+                    room_messages[room] = []
+                room_messages[room].append(encrypted_message)
+                if len(room_messages[room]) > 100:
+                    room_messages[room] = room_messages[room][-100:]
+                
+                await chat_room.broadcast_to_room(room, encrypted_message)
+                print(f"🔐 {username} отправил зашифрованное сообщение")
+            
             elif message_data["type"] == "image":
                 image_message = {
                     "id": hashlib.md5(f"{datetime.now()}{username}{message_data['url']}".encode()).hexdigest(),
@@ -320,7 +352,6 @@ async def health():
 
 @app.delete("/api/rooms/{room_name}")
 async def delete_room(room_name: str, username: str):
-    """Удаление комнаты (только для создателя)"""
     try:
         if room_name not in rooms_list:
             return {"success": False, "error": "Комната не найдена"}
@@ -352,7 +383,10 @@ async def delete_room(room_name: str, username: str):
         if room_name in room_users:
             del room_users[room_name]
         
-        print(f"🗑️ Комната {room_name} удалена пользователем {username}")
+        if room_name in room_keys:
+            del room_keys[room_name]
+        
+        print(f"🗑️ Комната {room_name} удалена")
         return {"success": True, "message": "Комната успешно удалена"}
         
     except Exception as e:
@@ -361,7 +395,6 @@ async def delete_room(room_name: str, username: str):
 
 @app.get("/api/rooms/{room_name}/info")
 async def get_room_info(room_name: str):
-    """Получение информации о комнате"""
     if room_name not in rooms_data:
         return {"success": False, "error": "Комната не найдена"}
     
