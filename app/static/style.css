@@ -9,10 +9,8 @@ body {
     background: linear-gradient(135deg, #0a1a0a 0%, #000000 100%);
     height: 100vh;
     overflow: hidden;
-    backdrop-filter: blur(0px);
 }
 
-/* Современная цветовая схема в стиле macOS */
 :root {
     --glass-bg: rgba(26, 58, 26, 0.25);
     --glass-border: rgba(58, 140, 58, 0.3);
@@ -25,7 +23,6 @@ body {
     --blur-amount: 20px;
 }
 
-/* Стили для всех кнопок */
 button, .room-card, .room-item, .primary-btn, .create-room-btn, .new-chat-btn {
     border-radius: 16px !important;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -36,7 +33,6 @@ button:hover, .room-card:hover, .room-item:hover {
     backdrop-filter: blur(12px);
 }
 
-/* Экран авторизации */
 .auth-screen {
     display: flex;
     justify-content: center;
@@ -73,12 +69,6 @@ button:hover, .room-card:hover, .room-item:hover {
     color: var(--accent);
     margin-bottom: 20px;
     filter: drop-shadow(0 0 20px rgba(58, 140, 58, 0.5));
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.05); }
 }
 
 .logo h1 {
@@ -138,7 +128,6 @@ button:hover, .room-card:hover, .room-item:hover {
     box-shadow: 0 6px 20px rgba(58, 140, 58, 0.4);
 }
 
-/* Экран выбора комнат */
 .rooms-screen {
     display: flex;
     justify-content: center;
@@ -231,25 +220,18 @@ button:hover, .room-card:hover, .room-item:hover {
     font-size: 12px;
 }
 
-/* Модальное окно */
 .modal {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    animation: fadeIn 0.2s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 
 .modal-content {
@@ -259,18 +241,6 @@ button:hover, .room-card:hover, .room-item:hover {
     padding: 32px;
     width: 380px;
     border: 1px solid var(--glass-border);
-    animation: slideIn 0.3s;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 .modal-header {
@@ -281,7 +251,7 @@ button:hover, .room-card:hover, .room-item:hover {
 }
 
 .modal-header h3 {
-    color: var(--text-primary);
+    color: white;
     font-size: 20px;
     font-weight: 600;
 }
@@ -289,7 +259,7 @@ button:hover, .room-card:hover, .room-item:hover {
 .close-btn {
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: var(--text-secondary);
+    color: white;
     font-size: 24px;
     width: 32px;
     height: 32px;
@@ -309,7 +279,7 @@ button:hover, .room-card:hover, .room-item:hover {
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid var(--glass-border);
     border-radius: 14px;
-    color: var(--text-primary);
+    color: white;
     font-size: 14px;
     margin-bottom: 16px;
     transition: all 0.3s;
@@ -320,14 +290,11 @@ button:hover, .room-card:hover, .room-item:hover {
     border-color: var(--accent);
 }
 
-/* Основной чат - macOS стиль */
 .chat-app {
     display: flex;
     height: 100vh;
-    backdrop-filter: blur(0px);
 }
 
-/* Левая панель */
 .sidebar {
     width: 300px;
     background: rgba(13, 31, 13, 0.7);
@@ -349,14 +316,13 @@ button:hover, .room-card:hover, .room-item:hover {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: var(--text-primary);
+    color: white;
     font-weight: 500;
 }
 
 .user-profile i {
     font-size: 40px;
     color: var(--accent);
-    filter: drop-shadow(0 2px 8px rgba(58, 140, 58, 0.3));
 }
 
 .logout-btn {
@@ -364,7 +330,7 @@ button:hover, .room-card:hover, .room-item:hover {
     border: none;
     padding: 10px;
     border-radius: 14px;
-    color: var(--text-secondary);
+    color: white;
     cursor: pointer;
     width: 40px;
     height: 40px;
@@ -377,112 +343,124 @@ button:hover, .room-card:hover, .room-item:hover {
     transform: scale(0.95);
 }
 
-.rooms-list {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-.rooms-title {
-    color: var(--text-dim);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 16px;
-    padding-left: 12px;
-}
-
-.room-item {
-    padding: 12px 16px;
-    margin-bottom: 6px;
-    border-radius: 14px;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all 0.2s;
+.current-room-info {
+    background: rgba(58, 140, 58, 0.15);
+    margin: 15px;
+    padding: 15px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
     gap: 12px;
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.03);
 }
 
-.room-item:hover {
-    background: rgba(58, 140, 58, 0.15);
-    color: var(--text-primary);
-    transform: translateX(4px);
-}
-
-.room-item.active {
-    background: linear-gradient(135deg, rgba(58, 140, 58, 0.25) 0%, rgba(74, 172, 74, 0.15) 100%);
+.room-icon i {
+    font-size: 32px;
     color: var(--accent);
-    border: 1px solid var(--glass-border);
 }
 
-.new-chat-btn {
-    margin: 20px;
-    padding: 14px;
-    background: rgba(58, 140, 58, 0.15);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s;
+.room-details {
+    flex: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+}
+
+.room-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.room-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
+.room-creator {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 2px;
+}
+
+.room-actions {
+    display: flex;
     gap: 8px;
 }
 
-.new-chat-btn:hover {
+.room-settings-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 12px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.room-settings-btn:hover {
     background: rgba(58, 140, 58, 0.3);
-    border-color: var(--accent);
-    transform: translateY(-2px);
+    color: var(--accent);
+    transform: scale(0.95);
 }
 
-/* Онлайн-пользователи */
+.leave-room-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 12px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.leave-room-btn:hover {
+    background: rgba(139, 58, 58, 0.3);
+    color: #ff6b6b;
+}
+
 .online-users {
-    padding: 20px;
-    border-top: 1px solid var(--glass-border);
-    margin-top: auto;
-}
-
-.online-users h3 {
-    color: var(--text-dim);
-    font-size: 12px;
-    margin-bottom: 10px;
-}
-
-.users-list {
-    max-height: 200px;
+    flex: 1;
+    padding: 0 15px;
     overflow-y: auto;
 }
 
+.online-users h3 {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .user-item {
-    padding: 8px 12px;
-    margin-bottom: 4px;
-    border-radius: 10px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--text-secondary);
+    padding: 8px 12px;
+    border-radius: 12px;
+    cursor: pointer;
     transition: all 0.2s;
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .user-item:hover {
-    background: rgba(58, 140, 58, 0.2);
-    color: var(--text-primary);
+    background: rgba(58, 140, 58, 0.15);
+    color: white;
 }
 
 .user-item i {
+    font-size: 20px;
     color: var(--accent);
-    font-size: 16px;
 }
 
-/* Основная область чата */
 .chat-area {
     flex: 1;
     display: flex;
@@ -501,7 +479,7 @@ button:hover, .room-card:hover, .room-item:hover {
 }
 
 .room-title {
-    color: var(--text-primary);
+    color: white;
     font-size: 20px;
     font-weight: 600;
     display: flex;
@@ -515,7 +493,7 @@ button:hover, .room-card:hover, .room-item:hover {
 }
 
 .room-info {
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.6);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -525,32 +503,18 @@ button:hover, .room-card:hover, .room-item:hover {
     font-size: 13px;
 }
 
-/* Сообщения - УЛУЧШЕННЫЕ СТИЛИ */
 .messages {
     flex: 1;
     overflow-y: auto;
     padding: 20px 30px;
     display: flex;
     flex-direction: column;
-    gap: 8px; /* Уменьшено расстояние между сообщениями */
+    gap: 8px;
 }
 
 .message {
     display: flex;
     flex-direction: column;
-    animation: messageSlideIn 0.3s ease-out;
-    width: 100%;
-}
-
-@keyframes messageSlideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
 }
 
 .message-header {
@@ -561,14 +525,13 @@ button:hover, .room-card:hover, .room-item:hover {
 }
 
 .username {
-    font-weight: 700; /* Жирный шрифт */
-    font-size: 15px; /* Увеличен размер шрифта */
-    letter-spacing: -0.2px;
+    font-weight: 700;
+    font-size: 15px;
 }
 
 .timestamp {
     font-size: 10px;
-    color: var(--text-dim);
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .message-text {
@@ -577,7 +540,7 @@ button:hover, .room-card:hover, .room-item:hover {
     padding: 8px 14px;
     border-radius: 18px;
     word-wrap: break-word;
-    color: var(--text-primary);
+    color: white;
     font-size: 14px;
     line-height: 1.45;
     border: 1px solid var(--glass-border);
@@ -588,7 +551,7 @@ button:hover, .room-card:hover, .room-item:hover {
 
 .system-message {
     text-align: center;
-    color: var(--text-dim);
+    color: rgba(255, 255, 255, 0.4);
     font-size: 12px;
     font-style: italic;
     padding: 4px 12px;
@@ -596,12 +559,6 @@ button:hover, .room-card:hover, .room-item:hover {
     border-radius: 20px;
     margin: 4px auto;
     width: fit-content;
-    backdrop-filter: blur(4px);
-}
-
-.image-message {
-    display: inline-block;
-    max-width: 100%;
 }
 
 .image-message img {
@@ -617,59 +574,75 @@ button:hover, .room-card:hover, .room-item:hover {
     transform: scale(1.02);
 }
 
-.image-caption {
-    background: rgba(26, 58, 26, 0.6);
-    backdrop-filter: blur(10px);
-    padding: 6px 12px;
-    border-radius: 12px;
+.message-actions {
     margin-top: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    display: inline-block;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    gap: 6px;
 }
 
-/* Стили для упоминаний */
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: rgba(58, 140, 58, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: rgba(58, 140, 58, 0.4);
+    color: var(--accent);
+}
+
+.reply-preview {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.reply-preview i {
+    color: var(--accent);
+    margin-right: 6px;
+}
+
 .mention {
     color: var(--accent);
     background: rgba(58, 140, 58, 0.25);
     border-radius: 12px;
     padding: 2px 6px;
     font-weight: 600;
-    font-size: 13px;
-}
-
-/* Стили для реакций */
-.message-reactions {
-    margin-top: 6px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
 }
 
 .reactions-container {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    margin-top: 6px;
 }
 
 .reaction-btn {
     background: rgba(58, 140, 58, 0.15);
-    backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
     padding: 3px 8px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.reaction-btn:hover {
-    background: rgba(58, 140, 58, 0.3);
-    transform: scale(1.05);
-}
-
-/* Попап с эмодзи */
 .emoji-picker-popup {
     position: absolute;
     background: rgba(13, 31, 13, 0.95);
@@ -692,146 +665,14 @@ button:hover, .room-card:hover, .room-item:hover {
     padding: 8px 12px;
     font-size: 20px;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.emoji-option:hover {
-    background: rgba(58, 140, 58, 0.4);
-    transform: scale(1.1);
-}
-
-/* Индикатор редактирования */
-.edit-indicator {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-left: 8px;
-}
-
-.edit-indicator-bar {
-    background: rgba(58, 140, 58, 0.2);
-    backdrop-filter: blur(10px);
-    border-left: 3px solid var(--accent);
-    border-radius: 12px;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-}
-
-.edit-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-secondary);
-    font-size: 13px;
-}
-
-.edit-content i {
-    color: var(--accent);
-}
-
-.cancel-edit-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 8px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 2px 8px;
-    margin-left: auto;
-}
-
-.cancel-edit-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Индикатор ответа */
-.reply-indicator {
-    background: rgba(58, 140, 58, 0.2);
-    backdrop-filter: blur(10px);
-    border-left: 3px solid var(--accent);
-    border-radius: 12px;
-    padding: 8px 12px;
-    margin-bottom: 10px;
-}
-
-.reply-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-secondary);
-    font-size: 13px;
-}
-
-.reply-content i {
-    color: var(--accent);
-}
-
-.cancel-reply-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 8px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 2px 8px;
-    margin-left: auto;
-}
-
-.cancel-reply-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* Предпросмотр ответа в сообщении */
-.reply-preview {
-    background: rgba(255, 255, 255, 0.05);
-    border-left: 3px solid var(--accent);
-    border-radius: 8px;
-    padding: 5px 10px;
-    margin-bottom: 6px;
-    font-size: 11px;
-    color: var(--text-dim);
-}
-
-.reply-preview i {
-    color: var(--accent);
-    margin-right: 6px;
-    font-size: 10px;
-}
-
-/* Кнопки действий */
-.message-actions {
-    margin-top: 6px;
-    opacity: 0;
-    transition: opacity 0.2s;
-    display: flex;
-    gap: 6px;
-}
-
-.message:hover .message-actions {
-    opacity: 1;
-}
-
-.action-btn {
-    background: rgba(58, 140, 58, 0.2);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    padding: 3px 8px;
-    border-radius: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s;
-}
-
-.action-btn:hover {
-    background: rgba(58, 140, 58, 0.4);
-    color: var(--accent);
-    transform: scale(0.98);
-}
-
-/* Область ввода сообщения */
 .input-container {
     padding: 20px 30px;
     background: rgba(13, 31, 13, 0.5);
     backdrop-filter: blur(20px);
     border-top: 1px solid var(--glass-border);
+    position: relative;
 }
 
 .input-tools {
@@ -846,7 +687,7 @@ button:hover, .room-card:hover, .room-item:hover {
     border: 1px solid var(--glass-border);
     padding: 10px 14px;
     border-radius: 14px;
-    color: var(--text-secondary);
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     transition: all 0.2s;
     font-size: 16px;
@@ -855,7 +696,6 @@ button:hover, .room-card:hover, .room-item:hover {
 .tool-btn:hover {
     background: rgba(58, 140, 58, 0.2);
     color: var(--accent);
-    transform: scale(0.98);
 }
 
 .input-wrapper {
@@ -870,7 +710,7 @@ button:hover, .room-card:hover, .room-item:hover {
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 24px;
-    color: var(--text-primary);
+    color: white;
     font-size: 14px;
     transition: all 0.3s;
 }
@@ -878,7 +718,6 @@ button:hover, .room-card:hover, .room-item:hover {
 .input-wrapper input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(58, 140, 58, 0.1);
 }
 
 .input-wrapper button {
@@ -892,109 +731,6 @@ button:hover, .room-card:hover, .room-item:hover {
     font-weight: 600;
 }
 
-.input-wrapper button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(58, 140, 58, 0.3);
-}
-
-/* Индикатор загрузки файла */
-.upload-preview {
-    position: fixed;
-    bottom: 100px;
-    right: 30px;
-    background: rgba(13, 31, 13, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    padding: 12px 20px;
-    color: var(--text-primary);
-    font-size: 14px;
-    z-index: 1000;
-    animation: slideInRight 0.3s;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(100px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Модальное окно для изображений */
-.image-modal {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.95);
-    justify-content: center;
-    align-items: center;
-}
-
-.image-modal-content {
-    position: relative;
-    max-width: 90%;
-    max-height: 90%;
-}
-
-.image-modal-img {
-    max-width: 90vw;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: 12px;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-}
-
-.image-modal-close {
-    position: absolute;
-    top: -40px;
-    right: 0;
-    color: white;
-    font-size: 35px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.image-modal-close:hover {
-    color: var(--accent);
-}
-
-.clickable-image {
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.clickable-image:hover {
-    transform: scale(1.02);
-}
-
-/* Скроллбар в стиле macOS */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(58, 140, 58, 0.4);
-    border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(58, 140, 58, 0.6);
-}
-/* Панель выбора смайликов в поле ввода */
 .message-emoji-picker {
     position: absolute;
     bottom: 80px;
@@ -1005,7 +741,6 @@ button:hover, .room-card:hover, .room-item:hover {
     border-radius: 16px;
     padding: 12px;
     z-index: 1000;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .emoji-grid {
@@ -1021,51 +756,161 @@ button:hover, .room-card:hover, .room-item:hover {
     padding: 8px;
     font-size: 20px;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.emoji-grid .emoji-option:hover {
-    background: rgba(58, 140, 58, 0.4);
-    transform: scale(1.1);
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    justify-content: center;
+    align-items: center;
 }
 
-.input-container {
+.image-modal-content {
     position: relative;
+    max-width: 90%;
+    max-height: 90%;
 }
-/* Адаптивность */
+
+.image-modal-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.image-modal-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: white;
+    font-size: 35px;
+    cursor: pointer;
+}
+
+.upload-preview {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    background: rgba(13, 31, 13, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 12px 20px;
+    color: white;
+    font-size: 14px;
+    z-index: 1000;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(58, 140, 58, 0.4);
+    border-radius: 3px;
+}
+
+/* ===== СТИЛИ ДЛЯ НАСТРОЕК КОМНАТЫ (ШЕСТЕРЁНКА) ===== */
+#roomSettingsModal .modal-content,
+#roomSettingsModal .settings-section,
+#roomSettingsModal .settings-section h4,
+#roomSettingsModal .settings-section p,
+#roomSettingsModal .settings-section p strong,
+#roomSettingsModal .danger-section,
+#roomSettingsModal .danger-section h4,
+#roomSettingsModal .danger-section p {
+    color: #ffffff !important;
+}
+
+#roomSettingsModal .settings-section h4 {
+    color: #4aac4a !important;
+}
+
+#roomSettingsModal .settings-section p strong {
+    color: #ffd93d !important;
+}
+
+#roomSettingsModal .danger-section h4 {
+    color: #ff6b6b !important;
+}
+
+#roomSettingsModal .danger-section p {
+    color: #ffaaaa !important;
+}
+
+#roomSettingsModal .modal-content {
+    background: rgba(0, 0, 0, 0.95) !important;
+}
+
+.danger-btn {
+    background: #ff4444 !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    color: white !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    margin-top: 10px !important;
+}
+
+.danger-btn:hover {
+    background: #cc0000 !important;
+    transform: scale(0.98) !important;
+}
+
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+    color: white !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.modal-buttons {
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: flex-end !important;
+    margin-top: 20px !important;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         width: 80px;
     }
     
     .sidebar .user-profile span,
-    .sidebar .rooms-title,
-    .sidebar .room-item span,
-    .sidebar .new-chat-btn span,
+    .room-details,
     .online-users h3,
     .users-list span {
         display: none;
     }
     
-    .room-item {
+    .current-room-info {
         justify-content: center;
-        padding: 12px;
     }
     
-    .new-chat-btn {
-        justify-content: center;
+    .room-icon i {
+        font-size: 24px;
     }
     
     .message-text {
         max-width: 85%;
-    }
-    
-    .messages {
-        padding: 15px;
-        gap: 6px;
-    }
-    
-    .username {
-        font-size: 14px;
     }
 }

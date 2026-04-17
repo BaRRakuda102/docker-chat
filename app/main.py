@@ -7,7 +7,6 @@ from typing import Dict, Set
 from datetime import datetime
 import hashlib
 from pathlib import Path
-import re
 
 app = FastAPI()
 
@@ -34,13 +33,6 @@ room_messages = {}
 room_users = {}
 active_connections: Dict[str, Set[WebSocket]] = {}
 user_rooms: Dict[WebSocket, Dict] = {}
-
-# Классические эмодзи из ICQ/AIM
-EMOJIS = {
-    "smile": "☺️", "sad": "☹️", "wink": "😉", "tongue": "😛", "surprised": "😮",
-    "heart": "❤️", "cool": "😎", "cry": "😢", "angry": "😠", "kiss": "😘",
-    "clap": "👏", "thumbs_up": "👍", "thumbs_down": "👎", "laugh": "😄", "confused": "😕"
-}
 
 class ChatRoom:
     async def create_room(self, room_name: str, password: str, creator: str):
@@ -233,19 +225,13 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
             message_data = json.loads(data)
             
             if message_data["type"] == "message":
-                # Обрабатываем @упоминания
-                message_text = message_data["message"]
-                mentions = re.findall(r'@(\w+)', message_text)
-                
                 chat_message = {
-                    "id": hashlib.md5(f"{datetime.now()}{username}{message_text}".encode()).hexdigest(),
+                    "id": hashlib.md5(f"{datetime.now()}{username}{message_data['message']}".encode()).hexdigest(),
                     "type": "message",
                     "username": username,
-                    "message": message_text,
+                    "message": message_data["message"],
                     "timestamp": datetime.now().strftime("%H:%M"),
-                    "user_id": user_id,
-                    "mentions": mentions,
-                    "edited": False
+                    "user_id": user_id
                 }
                 
                 if "reply_to" in message_data and message_data["reply_to"]:
@@ -258,21 +244,9 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
                     room_messages[room] = room_messages[room][-100:]
                 
                 await chat_room.broadcast_to_room(room, chat_message)
-                
-                # Отправляем уведомления об упоминаниях
-                for mention in mentions:
-                    await chat_room.broadcast_to_room(room, {
-                        "type": "mention",
-                        "from": username,
-                        "to": mention,
-                        "message": message_text,
-                        "timestamp": datetime.now().strftime("%H:%M")
-                    })
-                
-                print(f"💬 {username}: {message_text[:50]}")
+                print(f"💬 {username}: {message_data['message'][:50]}")
             
             elif message_data["type"] == "edit_message":
-                # Редактирование сообщения
                 message_id = message_data["message_id"]
                 new_text = message_data["new_text"]
                 
@@ -291,7 +265,6 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
                         break
             
             elif message_data["type"] == "reaction":
-                # Добавление реакции
                 message_id = message_data["message_id"]
                 reaction = message_data["reaction"]
                 
@@ -325,8 +298,7 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
                     "url": message_data["url"],
                     "caption": message_data.get("caption", ""),
                     "timestamp": datetime.now().strftime("%H:%M"),
-                    "user_id": user_id,
-                    "edited": False
+                    "user_id": user_id
                 }
                 
                 if "reply_to" in message_data and message_data["reply_to"]:
@@ -345,6 +317,63 @@ async def websocket_endpoint(websocket: WebSocket, room: str, username: str, use
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+@app.delete("/api/rooms/{room_name}")
+async def delete_room(room_name: str, username: str):
+    """Удаление комнаты (только для создателя)"""
+    try:
+        if room_name not in rooms_list:
+            return {"success": False, "error": "Комната не найдена"}
+        
+        if rooms_data[room_name]["creator"] != username:
+            return {"success": False, "error": "Только создатель комнаты может удалить её"}
+        
+        if room_name in active_connections:
+            for connection in list(active_connections[room_name]):
+                try:
+                    await connection.send_json({
+                        "type": "room_deleted",
+                        "message": f"Комната {room_name} удалена создателем"
+                    })
+                    await connection.close()
+                except:
+                    pass
+            del active_connections[room_name]
+        
+        if room_name in rooms_data:
+            del rooms_data[room_name]
+        
+        if room_name in rooms_list:
+            rooms_list.remove(room_name)
+        
+        if room_name in room_messages:
+            del room_messages[room_name]
+        
+        if room_name in room_users:
+            del room_users[room_name]
+        
+        print(f"🗑️ Комната {room_name} удалена пользователем {username}")
+        return {"success": True, "message": "Комната успешно удалена"}
+        
+    except Exception as e:
+        print(f"❌ Ошибка удаления комнаты: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.get("/api/rooms/{room_name}/info")
+async def get_room_info(room_name: str):
+    """Получение информации о комнате"""
+    if room_name not in rooms_data:
+        return {"success": False, "error": "Комната не найдена"}
+    
+    return {
+        "success": True,
+        "room": {
+            "name": room_name,
+            "creator": rooms_data[room_name]["creator"],
+            "created_at": rooms_data[room_name]["created_at"],
+            "member_count": len(room_users.get(room_name, set()))
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
