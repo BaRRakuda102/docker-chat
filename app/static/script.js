@@ -6,6 +6,7 @@ let roomsList = [];
 let pendingUserId = null;
 let currentRoomId = null;
 let isRoomCreator = false;
+let isJoining = false;
 
 // ========== ПЕРЕКЛЮЧЕНИЕ ФОРМ ==========
 function showRegisterForm() {
@@ -356,6 +357,7 @@ async function createNewRoom() {
 let pendingRoom = '';
 
 function promptJoinRoom(roomName) {
+    if (isJoining) return;
     pendingRoom = roomName;
     document.getElementById('joinRoomNameText').innerHTML = 'Комната: ' + roomName;
     document.getElementById('joinRoomModal').style.display = 'flex';
@@ -367,11 +369,14 @@ function closeJoinRoomModal() {
 }
 
 async function joinSelectedRoom() {
+    if (isJoining) return;
     const password = document.getElementById('roomPassword').value;
     if (!password) {
         alert('Введите пароль');
         return;
     }
+    
+    isJoining = true;
     
     try {
         const res = await fetch('/api/join_room', {
@@ -380,6 +385,7 @@ async function joinSelectedRoom() {
             body: JSON.stringify({ room: pendingRoom, password: password })
         });
         const data = await res.json();
+        
         if (data.success) {
             closeJoinRoomModal();
             currentRoom = pendingRoom;
@@ -391,11 +397,14 @@ async function joinSelectedRoom() {
             document.getElementById('chatMessages').innerHTML = '';
             await updateRoomInfo();
             connectWebSocket();
+            localStorage.removeItem('join_room');
         } else {
             alert('Ошибка: ' + data.error);
         }
     } catch(e) {
         alert('Ошибка: ' + e.message);
+    } finally {
+        isJoining = false;
     }
 }
 
@@ -649,7 +658,6 @@ function closeImageViewer() {
 
 // ========== ЧАТ ==========
 function connectWebSocket() {
-    // Определяем протокол: wss для HTTPS, ws для HTTP
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
     ws = new WebSocket(wsUrl);
@@ -770,10 +778,10 @@ if (savedToken && savedUser) {
 }
 
 // Проверка приглашения
-const joinRoom = localStorage.getItem('join_room');
-if (joinRoom) {
+const joinRoomFromInvite = localStorage.getItem('join_room');
+if (joinRoomFromInvite && !currentRoom) {
     localStorage.removeItem('join_room');
     setTimeout(() => {
-        promptJoinRoom(joinRoom);
+        promptJoinRoom(joinRoomFromInvite);
     }, 500);
 }

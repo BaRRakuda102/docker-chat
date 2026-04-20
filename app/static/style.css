@@ -14,6 +14,27 @@ body {
     padding: 20px;
 }
 
+/* Резервные стили для Edge */
+body {
+    background: #0a1a0a !important;
+    color: white !important;
+}
+
+.glass-container, .rooms-page, .join-container {
+    background: rgba(13, 31, 13, 0.95) !important;
+    backdrop-filter: none !important;
+}
+
+input, button {
+    background: #1a3a1a !important;
+    color: white !important;
+    border: 1px solid #4aac4a !important;
+}
+
+.btn-primary {
+    background: #3a8c3a !important;
+}
+
 /* ========== СТАРТОВАЯ СТРАНИЦА ========== */
 .glass-container {
     max-width: 1200px;
@@ -509,20 +530,18 @@ body {
     flex-direction: row-reverse;
 }
 
-/* Текст сообщения - ограничение 250px и перенос слов */
+/* Текст сообщения - по ширине контента */
 .chat-message-text {
     background: rgba(26, 58, 26, 0.7);
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 18px;
     color: white;
     font-size: 14px;
     line-height: 1.4;
     word-wrap: break-word;
-    word-break: break-word;
-    white-space: normal;
     display: inline-block;
-    max-width: 250px;
     width: auto;
+    max-width: 250px;
 }
 
 /* Свои сообщения — зелёный фон */
@@ -609,6 +628,7 @@ body {
 .settings-btn i, .invite-btn i, .leave-room-btn i {
     font-size: 14px;
 }
+
 /* Кнопка прикрепления файла */
 .attach-btn {
     background: rgba(74, 172, 74, 0.2);
@@ -880,47 +900,6 @@ body {
     overflow: hidden;
 }
 
-/* Стили для скроллбара чата в стиле macOS */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(74, 172, 74, 0.5);
-    border-radius: 10px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(74, 172, 74, 0.8);
-}
-
-/* Стили для кнопки настроек */
-.settings-btn {
-    background: rgba(74, 172, 74, 0.2);
-    border: 1px solid rgba(74, 172, 74, 0.4);
-    border-radius: 30px;
-    padding: 8px 16px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 13px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.settings-btn:hover {
-    background: rgba(74, 172, 74, 0.4);
-    transform: translateY(-2px);
-}
-
 /* Секции настроек */
 .settings-section {
     margin-bottom: 20px;
@@ -1023,20 +1002,23 @@ body {
     background: rgba(139, 58, 58, 0.8);
 }
 
-/* Белый текст в модальных окнах */
-.modal-content p, 
-.modal-content .modal-buttons button,
-#confirmDeleteModal p,
-#confirmDeleteModal .modal-content p {
-    color: white !important;
+/* Стили для скроллбара чата */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
 }
 
-#confirmDeleteModal .danger-btn {
-    color: white !important;
+.chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
 }
 
-#confirmDeleteModal .secondary-btn {
-    color: white !important;
+.chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(74, 172, 74, 0.5);
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 172, 74, 0.8);
 }
 
 /* Принудительно белый текст во всех модальных окнах */
@@ -1052,7 +1034,6 @@ body {
     color: white !important;
 }
 
-/* Адаптивность */
 @media (max-width: 900px) {
     .glass-container {
         flex-direction: column;
