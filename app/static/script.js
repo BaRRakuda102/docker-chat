@@ -18,11 +18,16 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function showMessage(elementId, text, isError = false) {
+function showMessage(elementId, text, isError) {
     const el = document.getElementById(elementId);
     if (el) {
-        el.innerHTML = `<span style="color: ${isError ? '#ff6b6b' : '#4aac4a'}">${text}</span>`;
-        setTimeout(() => { if (el.innerHTML === `<span style="color: ${isError ? '#ff6b6b' : '#4aac4a'}">${text}</span>`) el.innerHTML = ''; }, 3000);
+        const color = isError ? '#ff6b6b' : '#4aac4a';
+        el.innerHTML = '<span style="color: ' + color + '">' + text + '</span>';
+        setTimeout(function() {
+            if (el.innerHTML === '<span style="color: ' + color + '">' + text + '</span>') {
+                el.innerHTML = '';
+            }
+        }, 3000);
     }
 }
 
@@ -44,17 +49,26 @@ async function doRegister() {
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
     
-    if (!username || !email || !password) return showMessage('registerMessage', 'Заполните все поля', true);
-    if (password !== confirm) return showMessage('registerMessage', 'Пароли не совпадают', true);
-    if (password.length < 6) return showMessage('registerMessage', 'Пароль должен быть не менее 6 символов', true);
+    if (!username || !email || !password) {
+        showMessage('registerMessage', 'Заполните все поля', true);
+        return;
+    }
+    if (password !== confirm) {
+        showMessage('registerMessage', 'Пароли не совпадают', true);
+        return;
+    }
+    if (password.length < 6) {
+        showMessage('registerMessage', 'Пароль должен быть не менее 6 символов', true);
+        return;
+    }
     
-    showMessage('registerMessage', 'Регистрация...');
+    showMessage('registerMessage', 'Регистрация...', false);
     
     try {
         const res = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
+            body: JSON.stringify({ username: username, email: email, password: password })
         });
         const data = await res.json();
         
@@ -62,8 +76,8 @@ async function doRegister() {
             localStorage.setItem('chat_token', data.token);
             localStorage.setItem('chat_username', data.username);
             currentUser = data.username;
-            showMessage('registerMessage', '✅ Регистрация успешна!');
-            setTimeout(() => {
+            showMessage('registerMessage', 'Регистрация успешна!', false);
+            setTimeout(function() {
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('roomsContainer').style.display = 'block';
                 document.getElementById('userNameDisplay').innerHTML = currentUser;
@@ -71,10 +85,10 @@ async function doRegister() {
                 loadUserProfile();
             }, 1000);
         } else {
-            showMessage('registerMessage', '❌ ' + data.error, true);
+            showMessage('registerMessage', data.error, true);
         }
     } catch(e) {
-        showMessage('registerMessage', '❌ Ошибка: ' + e.message, true);
+        showMessage('registerMessage', 'Ошибка: ' + e.message, true);
     }
 }
 
@@ -82,15 +96,18 @@ async function doRegister() {
 async function doLogin() {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
-    if (!username || !password) return showMessage('loginMessage', 'Введите имя и пароль', true);
+    if (!username || !password) {
+        showMessage('loginMessage', 'Введите имя и пароль', true);
+        return;
+    }
     
-    showMessage('loginMessage', 'Вход...');
+    showMessage('loginMessage', 'Вход...', false);
     
     try {
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username: username, password: password })
         });
         const data = await res.json();
         
@@ -104,16 +121,19 @@ async function doLogin() {
             loadRooms();
             loadUserProfile();
         } else {
-            showMessage('loginMessage', '❌ ' + data.error, true);
+            showMessage('loginMessage', data.error, true);
         }
     } catch(e) {
-        showMessage('loginMessage', '❌ Ошибка: ' + e.message, true);
+        showMessage('loginMessage', 'Ошибка: ' + e.message, true);
     }
 }
 
 // ========== ПРОФИЛЬ ==========
 function toggleProfileMenu() {
-    document.getElementById('profileDropdown')?.classList.toggle('show');
+    const dropdown = document.getElementById('profileDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
 }
 
 document.addEventListener('click', function(e) {
@@ -124,28 +144,40 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function calculateAge(birthDate) {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
+
 async function loadUserProfile() {
     try {
-        const res = await fetch(`/api/user/profile?username=${encodeURIComponent(currentUser)}`);
+        const res = await fetch('/api/user/profile?username=' + encodeURIComponent(currentUser));
         const data = await res.json();
         if (data.success) {
             document.getElementById('profileUsername').innerHTML = data.username;
             document.getElementById('profileEmail').innerHTML = data.email;
             document.getElementById('displayName').innerHTML = data.display_name || data.username;
-            document.getElementById('userAge').innerHTML = data.birth_date ? `${calculateAge(data.birth_date)} лет (${data.birth_date})` : 'Не указан';
+            if (data.birth_date) {
+                const age = calculateAge(data.birth_date);
+                document.getElementById('userAge').innerHTML = age + ' лет (' + data.birth_date + ')';
+            } else {
+                document.getElementById('userAge').innerHTML = 'Не указан';
+            }
             document.getElementById('regDate').innerHTML = new Date(data.created_at).toLocaleDateString();
-            if (data.avatar_url) updateAvatarDisplay(data.avatar_url);
+            if (data.avatar_url) {
+                updateAvatarDisplay(data.avatar_url);
+            }
         }
-    } catch(e) { console.error(e); }
-}
-
-function calculateAge(birthDate) {
-    if (!birthDate) return null;
-    const today = new Date(), birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 function showEditProfileModal() {
@@ -172,8 +204,12 @@ async function saveProfile() {
             alert('Профиль обновлён!');
             closeEditProfileModal();
             loadUserProfile();
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка: ' + e.message); }
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    }
 }
 
 // ========== АВАТАР ==========
@@ -188,26 +224,39 @@ async function uploadAvatar(file) {
             updateAvatarDisplay(data.avatar_url + '?t=' + Date.now());
             alert('Аватар обновлён!');
             loadUserProfile();
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка загрузки аватара'); }
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка загрузки аватара');
+    }
 }
 
 function updateAvatarDisplay(avatarUrl) {
-    ['userAvatarSmall', 'userAvatarLarge', 'chatUserAvatar', 'editAvatarPreview'].forEach(id => {
-        const el = document.getElementById(id);
+    const ids = ['userAvatarSmall', 'userAvatarLarge', 'chatUserAvatar', 'editAvatarPreview'];
+    for (var i = 0; i < ids.length; i++) {
+        const el = document.getElementById(ids[i]);
         if (el) el.src = avatarUrl;
-    });
+    }
 }
 
-document.getElementById('avatarInput')?.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = event => { document.getElementById('editAvatarPreview').src = event.target.result; };
-        reader.readAsDataURL(file);
-        uploadAvatar(file);
-    } else alert('Файл должен быть изображением до 5MB');
-});
+const avatarInput = document.getElementById('avatarInput');
+if (avatarInput) {
+    avatarInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('editAvatarPreview');
+                if (preview) preview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            uploadAvatar(file);
+        } else {
+            alert('Файл должен быть изображением до 5MB');
+        }
+    });
+}
 
 // ========== КОМНАТЫ ==========
 async function loadRooms() {
@@ -216,29 +265,40 @@ async function loadRooms() {
         const data = await res.json();
         roomsList = data.success ? data.rooms : [];
         renderRooms();
-    } catch(e) { roomsList = []; renderRooms(); }
+    } catch(e) {
+        roomsList = [];
+        renderRooms();
+    }
 }
 
 function renderRooms() {
     const container = document.getElementById('roomsList');
     if (!container) return;
-    if (!roomsList.length) {
+    if (roomsList.length === 0) {
         container.innerHTML = '<div class="empty-rooms"><i class="fas fa-comment-slash"></i><p>Нет комнат</p><small>Создайте первую комнату</small></div>';
     } else {
-        container.innerHTML = roomsList.map(room => `
-            <div class="room-card" onclick="promptJoinRoom('${room.name}')">
-                <div class="room-icon"><i class="fas fa-lock"></i></div>
-                <div class="room-details"><h4>${escapeHtml(room.name)}</h4><p>Создал: ${escapeHtml(room.creator)}</p></div>
-            </div>
-        `).join('');
+        let html = '';
+        for (var i = 0; i < roomsList.length; i++) {
+            const room = roomsList[i];
+            html += '<div class="room-card" onclick="promptJoinRoom(\'' + escapeHtml(room.name) + '\')">';
+            html += '<div class="room-icon"><i class="fas fa-lock"></i></div>';
+            html += '<div class="room-details">';
+            html += '<h4>' + escapeHtml(room.name) + '</h4>';
+            html += '<p>Создал: ' + escapeHtml(room.creator) + '</p>';
+            html += '</div></div>';
+        }
+        container.innerHTML = html;
     }
 }
 
 function filterRooms() {
     const term = document.getElementById('searchRoomsInput').value.toLowerCase();
-    document.querySelectorAll('.room-card').forEach(card => {
-        card.style.display = card.querySelector('h4').innerText.toLowerCase().includes(term) ? 'flex' : 'none';
-    });
+    const cards = document.querySelectorAll('.room-card');
+    for (var i = 0; i < cards.length; i++) {
+        const card = cards[i];
+        const name = card.querySelector('h4').innerText.toLowerCase();
+        card.style.display = name.indexOf(term) !== -1 ? 'flex' : 'none';
+    }
 }
 
 function showCreateRoomModal() {
@@ -247,32 +307,44 @@ function showCreateRoomModal() {
     document.getElementById('newRoomPassword').value = '';
 }
 
-function closeCreateRoomModal() { document.getElementById('createRoomModal').style.display = 'none'; }
+function closeCreateRoomModal() {
+    document.getElementById('createRoomModal').style.display = 'none';
+}
 
 async function createNewRoom() {
     const name = document.getElementById('newRoomName').value.trim();
     const password = document.getElementById('newRoomPassword').value;
-    if (!name || !password) return alert('Заполните все поля');
-    if (name.length < 3) return alert('Название не менее 3 символов');
+    if (!name || !password) {
+        alert('Заполните все поля');
+        return;
+    }
+    if (name.length < 3) {
+        alert('Название комнаты должно быть не менее 3 символов');
+        return;
+    }
     try {
         const res = await fetch('/api/create_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, password, creator: currentUser })
+            body: JSON.stringify({ name: name, password: password, creator: currentUser })
         });
         const data = await res.json();
         if (data.success) {
             alert('Комната создана!');
             closeCreateRoomModal();
             loadRooms();
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка: ' + e.message); }
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    }
 }
 
-function promptJoinRoom(roomName, presetPassword = null) {
+function promptJoinRoom(roomName, presetPassword) {
     if (isJoining) return;
     pendingRoom = roomName;
-    pendingRoomPassword = presetPassword;
+    pendingRoomPassword = presetPassword || null;
     if (presetPassword) {
         joinSelectedRoom();
     } else {
@@ -282,19 +354,24 @@ function promptJoinRoom(roomName, presetPassword = null) {
     }
 }
 
-function closeJoinRoomModal() { document.getElementById('joinRoomModal').style.display = 'none'; }
+function closeJoinRoomModal() {
+    document.getElementById('joinRoomModal').style.display = 'none';
+}
 
 async function joinSelectedRoom() {
     if (isJoining) return;
     const password = pendingRoomPassword || document.getElementById('roomPassword').value;
-    if (!password) return alert('Введите пароль');
+    if (!password) {
+        alert('Введите пароль');
+        return;
+    }
     
     isJoining = true;
     try {
         const res = await fetch('/api/join_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room: pendingRoom, password })
+            body: JSON.stringify({ room: pendingRoom, password: password })
         });
         const data = await res.json();
         if (data.success) {
@@ -303,16 +380,23 @@ async function joinSelectedRoom() {
             localStorage.setItem('current_room', currentRoom);
             document.getElementById('roomsContainer').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
+            document.getElementById('chatRoomName').innerHTML = '# ' + currentRoom;
             document.getElementById('chatRoomTitle').innerHTML = currentRoom;
             document.getElementById('chatCurrentUser').innerHTML = currentUser;
             document.getElementById('chatMessages').innerHTML = '';
             await updateRoomInfo();
             connectWebSocket();
-            localStorage.removeItem('join_room');
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка: ' + e.message); }
-    finally { isJoining = false; pendingRoomPassword = null; }
+            localStorage.removeItem('auto_join_room');
+            localStorage.removeItem('auto_join_password');
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    } finally {
+        isJoining = false;
+        pendingRoomPassword = null;
+    }
 }
 
 function leaveToRooms() {
@@ -326,23 +410,31 @@ function leaveToRooms() {
 // ========== ПРИГЛАШЕНИЯ ==========
 async function updateRoomInfo() {
     try {
-        const res = await fetch(`/api/rooms/${currentRoom}/info`);
+        const res = await fetch('/api/rooms/' + currentRoom + '/info');
         const data = await res.json();
         if (data.success) {
             currentRoomId = data.room.id;
             isRoomCreator = (data.room.creator === currentUser);
             const btn = document.getElementById('roomSettingsBtn');
-            if (btn) btn.style.display = isRoomCreator ? 'flex' : 'none';
+            if (btn) {
+                btn.style.display = isRoomCreator ? 'flex' : 'none';
+            }
         }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 function showInviteModal() {
-    document.getElementById('inviteLinkInput').value = `${window.location.origin}/join/${currentRoomId}`;
+    const link = window.location.origin + '/join/' + currentRoomId;
+    document.getElementById('inviteLinkInput').value = link;
     document.getElementById('inviteModal').style.display = 'flex';
 }
 
-function closeInviteModal() { document.getElementById('inviteModal').style.display = 'none'; }
+function closeInviteModal() {
+    document.getElementById('inviteModal').style.display = 'none';
+}
+
 function copyInviteLink() {
     const input = document.getElementById('inviteLinkInput');
     input.select();
@@ -353,7 +445,7 @@ function copyInviteLink() {
 // ========== НАСТРОЙКИ КОМНАТЫ ==========
 async function showRoomSettings() {
     try {
-        const res = await fetch(`/api/rooms/${currentRoom}/info`);
+        const res = await fetch('/api/rooms/' + currentRoom + '/info');
         const data = await res.json();
         if (data.success) {
             document.getElementById('settingsRoomName').textContent = data.room.name;
@@ -361,33 +453,50 @@ async function showRoomSettings() {
             document.getElementById('settingsMemberCount').textContent = data.room.member_count;
             document.getElementById('settingsRoomId').textContent = data.room.id;
             await loadRoomMembers();
-            document.getElementById('deleteRoomSection').style.display = isRoomCreator ? 'block' : 'none';
+            const deleteSection = document.getElementById('deleteRoomSection');
+            if (deleteSection) {
+                deleteSection.style.display = isRoomCreator ? 'block' : 'none';
+            }
             document.getElementById('roomSettingsModal').style.display = 'flex';
         }
-    } catch(e) { alert('Не удалось загрузить информацию'); }
+    } catch(e) {
+        alert('Не удалось загрузить информацию');
+    }
 }
 
-function closeRoomSettings() { document.getElementById('roomSettingsModal').style.display = 'none'; }
+function closeRoomSettings() {
+    document.getElementById('roomSettingsModal').style.display = 'none';
+}
 
 async function loadRoomMembers() {
     try {
-        const res = await fetch(`/api/rooms/${currentRoom}/members`);
+        const res = await fetch('/api/rooms/' + currentRoom + '/members');
         const data = await res.json();
         const container = document.getElementById('roomMembersList');
         if (container && data.success) {
-            container.innerHTML = data.members.map(m => `
-                <div class="member-item">
-                    <span class="member-name">${escapeHtml(m)} ${m === currentUser ? '(Вы)' : ''}</span>
-                    ${m !== currentUser && isRoomCreator ? `<button onclick="kickUser('${m}')" class="kick-btn">Выгнать</button>` : ''}
-                </div>
-            `).join('');
+            let html = '';
+            for (var i = 0; i < data.members.length; i++) {
+                const m = data.members[i];
+                html += '<div class="member-item">';
+                html += '<span class="member-name">' + escapeHtml(m) + (m === currentUser ? ' (Вы)' : '') + '</span>';
+                if (m !== currentUser && isRoomCreator) {
+                    html += '<button onclick="kickUser(\'' + escapeHtml(m) + '\')" class="kick-btn">Выгнать</button>';
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
         }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error(e);
+    }
 }
 
 async function renameRoom() {
     const newName = document.getElementById('editRoomName').value.trim();
-    if (!newName || newName.length < 3) return alert('Название не менее 3 символов');
+    if (!newName || newName.length < 3) {
+        alert('Название не менее 3 символов');
+        return;
+    }
     try {
         const res = await fetch('/api/rooms/rename', {
             method: 'POST',
@@ -398,29 +507,37 @@ async function renameRoom() {
         if (data.success) {
             alert('Название изменено!');
             currentRoom = newName;
-            document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
+            document.getElementById('chatRoomName').innerHTML = '# ' + currentRoom;
             document.getElementById('chatRoomTitle').innerHTML = currentRoom;
             closeRoomSettings();
             loadRooms();
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка соединения'); }
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка соединения');
+    }
 }
 
 async function kickUser(username) {
-    if (!confirm(`Выгнать ${username}?`)) return;
+    if (!confirm('Выгнать ' + username + '?')) return;
     try {
         const res = await fetch('/api/rooms/kick', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room_name: currentRoom, username, admin: currentUser })
+            body: JSON.stringify({ room_name: currentRoom, username: username, admin: currentUser })
         });
         const data = await res.json();
         if (data.success) {
-            alert(`Пользователь ${username} выгнан`);
+            alert('Пользователь ' + username + ' выгнан');
             await loadRoomMembers();
             await updateRoomInfo();
-        } else alert('Ошибка: ' + data.error);
-    } catch(e) { alert('Ошибка соединения'); }
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка соединения');
+    }
 }
 
 function confirmDeleteRoom() {
@@ -429,22 +546,28 @@ function confirmDeleteRoom() {
     document.getElementById('confirmDeleteModal').style.display = 'flex';
 }
 
-function closeConfirmDelete() { document.getElementById('confirmDeleteModal').style.display = 'none'; }
+function closeConfirmDelete() {
+    document.getElementById('confirmDeleteModal').style.display = 'none';
+}
 
 async function deleteRoom() {
     closeConfirmDelete();
     try {
-        const res = await fetch(`/api/rooms/delete/${currentRoom}?username=${encodeURIComponent(currentUser)}`, { method: 'DELETE' });
+        const res = await fetch('/api/rooms/delete/' + currentRoom + '?username=' + encodeURIComponent(currentUser), { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
-            alert(`Комната "${currentRoom}" удалена`);
+            alert('Комната "' + currentRoom + '" удалена');
             if (ws) ws.close();
             localStorage.removeItem('current_room');
             document.getElementById('chatContainer').style.display = 'none';
             document.getElementById('roomsContainer').style.display = 'block';
             await loadRooms();
-        } else alert('Ошибка: ' + (data.error || 'Не удалось удалить'));
-    } catch(e) { alert('Ошибка соединения'); }
+        } else {
+            alert('Ошибка: ' + (data.error || 'Не удалось удалить'));
+        }
+    } catch(e) {
+        alert('Ошибка соединения');
+    }
 }
 
 // ========== ПРЕДПРОСМОТР ИЗОБРАЖЕНИЙ ==========
@@ -454,18 +577,16 @@ function showImagePreview(file) {
         modal = document.createElement('div');
         modal.id = 'imagePreviewModal';
         modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width:500px; text-align:center">
-                <div class="modal-header"><h3>Предпросмотр</h3><button onclick="closeImagePreview()" class="close-btn">&times;</button></div>
-                <img id="previewImage" style="max-width:100%; max-height:300px; border-radius:12px; margin-bottom:15px">
-                <div class="input-group"><input type="text" id="previewCaption" placeholder="Подпись (необязательно)"></div>
-                <div style="display:flex; gap:10px"><button onclick="sendImageFromPreview()" class="btn btn-primary">Отправить</button><button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button></div>
-            </div>
-        `;
+        modal.innerHTML = '<div class="modal-content" style="max-width:500px; text-align:center">' +
+            '<div class="modal-header"><h3>Предпросмотр</h3><button onclick="closeImagePreview()" class="close-btn">&times;</button></div>' +
+            '<img id="previewImage" style="max-width:100%; max-height:300px; border-radius:12px; margin-bottom:15px">' +
+            '<div class="input-group"><input type="text" id="previewCaption" placeholder="Подпись (необязательно)"></div>' +
+            '<div style="display:flex; gap:10px"><button onclick="sendImageFromPreview()" class="btn btn-primary">Отправить</button>' +
+            '<button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button></div></div>';
         document.body.appendChild(modal);
     }
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = function(e) {
         document.getElementById('previewImage').src = e.target.result;
         document.getElementById('previewCaption').value = '';
         modal.style.display = 'flex';
@@ -476,7 +597,9 @@ function showImagePreview(file) {
 
 function closeImagePreview() {
     const modal = document.getElementById('imagePreviewModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+    }
     pendingImageFile = null;
 }
 
@@ -489,34 +612,40 @@ async function sendImageFromPreview() {
     try {
         const res = await fetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.url && ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'image', url: data.url, caption }));
+        if (data.url && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'image', url: data.url, caption: caption }));
         }
-    } catch(e) { console.error(e); alert('Ошибка загрузки'); }
+    } catch(e) {
+        console.error(e);
+        alert('Ошибка загрузки');
+    }
     pendingImageFile = null;
 }
 
 // ========== ВЕБ-СОКЕТ ==========
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
+    const wsUrl = protocol + '//' + window.location.host + '/ws/' + currentRoom + '/' + currentUser + '/ws_' + Date.now();
     ws = new WebSocket(wsUrl);
     
-    ws.onopen = () => {
+    ws.onopen = function() {
         console.log('WebSocket подключен');
-        document.getElementById('chatInput').disabled = false;
-        document.getElementById('chatInput').focus();
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.disabled = false;
+            chatInput.focus();
+        }
     };
     
-    ws.onmessage = (event) => {
+    ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const messagesDiv = document.getElementById('chatMessages');
         
         if (data.type === 'room_list_update' && data.action === 'delete') {
-            roomsList = roomsList.filter(r => r.name !== data.room_name);
+            roomsList = roomsList.filter(function(r) { return r.name !== data.room_name; });
             renderRooms();
             if (currentRoom === data.room_name) {
-                alert(`Комната "${data.room_name}" удалена`);
+                alert('Комната "' + data.room_name + '" удалена');
                 leaveToRooms();
             }
             return;
@@ -525,30 +654,24 @@ function connectWebSocket() {
         if (data.type === 'message') {
             const isOwn = data.username === currentUser;
             const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-            msgDiv.innerHTML = `
-                <div class="chat-message-header">
-                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor:pointer" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
-                    <span>${data.timestamp}</span>
-                </div>
-                <div class="chat-message-text">${escapeHtml(data.message)}</div>
-            `;
+            msgDiv.className = 'chat-message ' + (isOwn ? 'own' : 'other');
+            msgDiv.innerHTML = '<div class="chat-message-header">' +
+                '<span style="color: ' + (isOwn ? '#4aac4a' : '#ff8c42') + '; cursor:pointer" onclick="showUserContextMenu(event, \'' + escapeHtml(data.username) + '\')">' + escapeHtml(data.username) + '</span>' +
+                '<span>' + data.timestamp + '</span></div>' +
+                '<div class="chat-message-text">' + escapeHtml(data.message) + '</div>';
             messagesDiv.appendChild(msgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             if (!isOwn) playNotificationSound();
         } else if (data.type === 'image') {
             const isOwn = data.username === currentUser;
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-            msgDiv.innerHTML = `
-                <div class="chat-message-header">
-                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
-                    <span>${data.timestamp}</span>
-                </div>
-                <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
-                ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
-            `;
-            messagesDiv.appendChild(msgDiv);
+            const imgDiv = document.createElement('div');
+            imgDiv.className = 'chat-message ' + (isOwn ? 'own' : 'other');
+            imgDiv.innerHTML = '<div class="chat-message-header">' +
+                '<span style="color: ' + (isOwn ? '#4aac4a' : '#ff8c42') + '">' + escapeHtml(data.username) + '</span>' +
+                '<span>' + data.timestamp + '</span></div>' +
+                '<img src="' + data.url + '" class="chat-image" onclick="openImageViewer(\'' + data.url + '\')">' +
+                (data.caption ? '<div class="image-caption">' + escapeHtml(data.caption) + '</div>' : '');
+            messagesDiv.appendChild(imgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         } else if (data.type === 'system') {
             const sysDiv = document.createElement('div');
@@ -564,15 +687,15 @@ function connectWebSocket() {
         }
     };
     
-    ws.onerror = () => console.error('WebSocket ошибка');
-    ws.onclose = () => console.log('WebSocket отключен');
+    ws.onerror = function() { console.error('WebSocket ошибка'); };
+    ws.onclose = function() { console.log('WebSocket отключен'); };
 }
 
 function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
     if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'message', message }));
+    ws.send(JSON.stringify({ type: 'message', message: message }));
     input.value = '';
 }
 
@@ -580,49 +703,87 @@ function showUserContextMenu(event, username) {
     event.stopPropagation();
     const menu = document.createElement('div');
     menu.className = 'context-menu';
-    Object.assign(menu.style, { position: 'fixed', left: event.pageX + 'px', top: event.pageY + 'px', backgroundColor: '#0d1f0d', border: '1px solid #4aac4a', borderRadius: '12px', padding: '8px 0', zIndex: '1000' });
-    menu.innerHTML = `
-        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="viewUserProfile('${username}'); this.parentElement.remove();">👤 Профиль</div>
-        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="mentionUser('${username}'); this.parentElement.remove();">@ Отметить</div>
-        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="startPrivateChat('${username}'); this.parentElement.remove();">🔒 Написать лично</div>
-    `;
+    menu.style.position = 'fixed';
+    menu.style.left = event.pageX + 'px';
+    menu.style.top = event.pageY + 'px';
+    menu.style.backgroundColor = '#1a241a';
+    menu.style.border = '1px solid #4aac4a';
+    menu.style.borderRadius = '12px';
+    menu.style.padding = '8px 0';
+    menu.style.zIndex = '1000';
+    menu.innerHTML = '<div style="padding:8px 16px; cursor:pointer; color:white" onclick="viewUserProfile(\'' + username + '\'); this.parentElement.remove();">👤 Профиль</div>' +
+        '<div style="padding:8px 16px; cursor:pointer; color:white" onclick="mentionUser(\'' + username + '\'); this.parentElement.remove();">@ Отметить</div>' +
+        '<div style="padding:8px 16px; cursor:pointer; color:white" onclick="startPrivateChat(\'' + username + '\'); this.parentElement.remove();">🔒 Написать лично</div>';
     document.body.appendChild(menu);
-    setTimeout(() => document.addEventListener('click', function close(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); } }), 10);
+    setTimeout(function() {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 10);
 }
 
-function viewUserProfile(username) { alert(`Профиль ${username}`); }
-function mentionUser(username) { document.getElementById('chatInput').value += `@${username} `; }
-function startPrivateChat(username) { alert(`Личный чат с ${username} (в разработке)`); }
+function viewUserProfile(username) { alert('Профиль ' + username); }
+function mentionUser(username) {
+    const input = document.getElementById('chatInput');
+    if (input) input.value += '@' + username + ' ';
+}
+function startPrivateChat(username) { alert('Личный чат с ' + username + ' (в разработке)'); }
 
-document.getElementById('chatInput')?.addEventListener('paste', e => {
-    const item = e.clipboardData.items[0];
-    if (item.type.indexOf('image') !== -1) {
-        e.preventDefault();
-        showImagePreview(item.getAsFile());
-    }
-});
+const chatInputElement = document.getElementById('chatInput');
+if (chatInputElement) {
+    chatInputElement.addEventListener('paste', function(e) {
+        const item = e.clipboardData.items[0];
+        if (item && item.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            showImagePreview(item.getAsFile());
+        }
+    });
+}
 
-document.getElementById('fileInput')?.addEventListener('change', e => {
-    if (e.target.files.length) showImagePreview(e.target.files[0]);
-    e.target.value = '';
-});
+const fileInputElement = document.getElementById('fileInput');
+if (fileInputElement) {
+    fileInputElement.addEventListener('change', function(e) {
+        if (e.target.files.length) showImagePreview(e.target.files[0]);
+        e.target.value = '';
+    });
+}
 
 function openImageViewer(url) {
-    const modal = document.getElementById('imageViewerModal');
+    let modal = document.getElementById('imageViewerModal');
     if (!modal) {
-        const m = document.createElement('div');
-        m.id = 'imageViewerModal';
-        m.className = 'modal';
-        m.innerHTML = `<div class="modal-content" style="max-width:90%; background:transparent"><button onclick="closeImageViewer()" class="close-btn" style="position:absolute; top:20px; right:30px; background:rgba(0,0,0,0.5); border-radius:50%; width:40px; height:40px">&times;</button><img id="viewerImage" style="max-width:90vw; max-height:80vh; border-radius:16px"></div>`;
-        document.body.appendChild(m);
+        modal = document.createElement('div');
+        modal.id = 'imageViewerModal';
+        modal.className = 'modal';
+        modal.innerHTML = '<div class="modal-content" style="max-width:90%; background:transparent; box-shadow:none">' +
+            '<button onclick="closeImageViewer()" class="close-btn" style="position:absolute; top:20px; right:30px; background:rgba(0,0,0,0.5); border-radius:50%; width:40px; height:40px; color:white">&times;</button>' +
+            '<img id="viewerImage" style="max-width:90vw; max-height:80vh; border-radius:16px"></div>';
+        document.body.appendChild(modal);
     }
     document.getElementById('viewerImage').src = url;
-    document.getElementById('imageViewerModal').style.display = 'flex';
+    modal.style.display = 'flex';
 }
 
-function closeImageViewer() { document.getElementById('imageViewerModal')?.remove(); }
-function playNotificationSound() { document.getElementById('notificationSound')?.play().catch(e => console.log); }
-function logout() { localStorage.clear(); location.reload(); }
+function closeImageViewer() {
+    const modal = document.getElementById('imageViewerModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function playNotificationSound() {
+    const audio = document.getElementById('notificationSound');
+    if (audio) {
+        audio.play().catch(function(e) { console.log('Звук не воспроизведён'); });
+    }
+}
+
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
 
 // ========== ВОССТАНОВЛЕНИЕ СЕССИИ ==========
 const savedToken = localStorage.getItem('chat_token');
@@ -637,12 +798,18 @@ if (savedToken && savedUser) {
     
     const savedRoom = localStorage.getItem('current_room');
     if (savedRoom) {
-        setTimeout(() => promptJoinRoom(savedRoom), 500);
+        setTimeout(function() { promptJoinRoom(savedRoom); }, 500);
     }
 }
 
-const joinRoomFromInvite = localStorage.getItem('join_room');
-if (joinRoomFromInvite && !currentRoom) {
-    localStorage.removeItem('join_room');
-    setTimeout(() => promptJoinRoom(joinRoomFromInvite), 500);
+const autoJoinRoom = localStorage.getItem('auto_join_room');
+const autoJoinPassword = localStorage.getItem('auto_join_password');
+if (autoJoinRoom && autoJoinPassword && !currentRoom) {
+    localStorage.removeItem('auto_join_room');
+    localStorage.removeItem('auto_join_password');
+    setTimeout(function() {
+        promptJoinRoom(autoJoinRoom, autoJoinPassword);
+    }, 1000);
 }
+
+console.log('Script loaded successfully');

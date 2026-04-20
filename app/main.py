@@ -13,6 +13,14 @@ import uuid
 from database import get_db, User, Room, RoomMessage, RoomUser, PrivateChat, PrivateMessage
 from email_service import email_service
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+def verify_password(password: str, hashed: str):
+    return pwd_context.verify(password, hashed)
 
 
 AVATAR_DIR = Path("uploads/avatars")
@@ -52,7 +60,7 @@ class ChatRoom:
             return False, "Комната с таким названием уже существует", None
         
         room_uuid = str(uuid.uuid4())[:8]
-        password_hash = hashlib.md5(password.encode()).hexdigest()
+        password_hash = hash_password(password)
         
         new_room = Room(
             name=room_name,
@@ -79,8 +87,7 @@ class ChatRoom:
         room = db.query(Room).filter(Room.name == room_name).first()
         if not room:
             return False
-        hashed = hashlib.md5(password.encode()).hexdigest()
-        return room.password_hash == hashed
+        return verify_password(password, room.password_hash)
     
     async def get_all_rooms(self, db: Session) -> list:
         rooms = db.query(Room).all()

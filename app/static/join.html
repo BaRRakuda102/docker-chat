@@ -73,6 +73,7 @@
     const savedToken = localStorage.getItem('chat_token');
     const savedUser = localStorage.getItem('chat_username');
     if (savedToken && savedUser) { currentUser = savedUser; currentToken = savedToken; }
+    
     async function loadRoomInfo() {
         try {
             const res = await fetch(`/api/room_by_id/${roomId}`);
@@ -85,9 +86,11 @@
             } else { document.getElementById('roomInfo').innerHTML = '<p style="color:#ff6b6b;">Комната не найдена</p>'; }
         } catch(e) { document.getElementById('roomInfo').innerHTML = '<p style="color:#ff6b6b;">Ошибка загрузки</p>'; }
     }
+    
     function showLogin() { hideAll(); document.getElementById('loginForm').style.display = 'block'; }
     function showRegister() { hideAll(); document.getElementById('registerForm').style.display = 'block'; }
     function hideAll() { ['authForm', 'loginForm', 'registerForm', 'passwordForm'].forEach(id => document.getElementById(id).style.display = 'none'); }
+    
     async function doLogin() {
         const username = document.getElementById('loginUsername').value.trim(), password = document.getElementById('loginPassword').value, msg = document.getElementById('loginMessage');
         if (!username || !password) { msg.innerHTML = '<span class="error">Введите имя и пароль</span>'; return; }
@@ -103,6 +106,7 @@
             } else { msg.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
         } catch(e) { msg.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
     }
+    
     async function doRegister() {
         const username = document.getElementById('regUsername').value.trim(), email = document.getElementById('regEmail').value.trim(), password = document.getElementById('regPassword').value, confirm = document.getElementById('regPasswordConfirm').value, msg = document.getElementById('registerMessage');
         if (!username || !email || !password) { msg.innerHTML = '<span class="error">Заполните все поля</span>'; return; }
@@ -120,6 +124,7 @@
             } else { msg.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
         } catch(e) { msg.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
     }
+    
     async function joinRoom() {
         const password = document.getElementById('roomPassword').value, msg = document.getElementById('passwordMessage');
         if (!password) { msg.innerHTML = '<span class="error">Введите пароль</span>'; return; }
@@ -128,12 +133,17 @@
             const res = await fetch('/api/join_room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: roomName, password }) });
             const data = await res.json();
             if (data.success) {
+                // Сохраняем токен и комнату для автоматического входа
+                if (currentToken) localStorage.setItem('chat_token', currentToken);
+                if (currentUser) localStorage.setItem('chat_username', currentUser);
+                localStorage.setItem('auto_join_room', roomName);
+                localStorage.setItem('auto_join_password', password);
                 msg.innerHTML = '<span class="success">✅ Успешно! Перенаправление...</span>';
-                localStorage.setItem('join_room', roomName);
                 setTimeout(() => { window.location.href = '/'; }, 1000);
             } else { msg.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
         } catch(e) { msg.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
     }
+    
     function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
     loadRoomInfo();
 </script>
