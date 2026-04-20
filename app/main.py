@@ -565,13 +565,20 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)):
     if not user:
         return {"success": False, "error": "Пользователь не найден"}
     
+    # Проверяем, существует ли файл аватара
+    avatar_url = user.avatar_url if user.avatar_url else None
+    
+    # Если аватар не установлен или файл не существует, используем стандартный
+    if not avatar_url or not os.path.exists(avatar_url.lstrip('/')):
+        avatar_url = "/static/default-avatar.png"
+    
     return {
         "success": True,
         "username": user.username,
         "email": user.email,
         "display_name": user.display_name if user.display_name else user.username,
         "birth_date": user.birth_date if user.birth_date else None,
-        "avatar_url": user.avatar_url if user.avatar_url else "/static/default-avatar.png",
+        "avatar_url": avatar_url,
         "created_at": user.created_at.isoformat()
     }
 
