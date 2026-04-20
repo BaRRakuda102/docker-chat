@@ -1039,6 +1039,19 @@ body {
     color: white !important;
 }
 
+/* Принудительно белый текст во всех модальных окнах */
+.modal-content,
+.modal-content p,
+.modal-content h3,
+.modal-content span,
+.modal-content div,
+#confirmDeleteModal p,
+#confirmDeleteModal .modal-content p,
+#roomSettingsModal p,
+#roomSettingsModal span {
+    color: white !important;
+}
+
 /* Адаптивность */
 @media (max-width: 900px) {
     .glass-container {

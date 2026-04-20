@@ -14,6 +14,9 @@ from database import get_db, User, Room, RoomMessage, RoomUser, PrivateChat, Pri
 from email_service import email_service
 from sqlalchemy.orm import Session
 
+
+AVATAR_DIR = Path("uploads/avatars")
+AVATAR_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI()
 
 app.add_middleware(

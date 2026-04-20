@@ -248,17 +248,6 @@
             <div id="registerMessage" class="message"></div>
         </div>
         
-        <!-- <div id="verifyForm" style="display: none;">
-            <h3>Подтверждение email</h3>
-            <p>Введите код из письма</p>
-            <div class="input-group">
-                <input type="text" id="verifyCode" placeholder="6-значный код" maxlength="6">
-            </div>
-            <button onclick="doVerify()" class="btn btn-primary">Подтвердить</button>
-            <button onclick="resendCode()" class="btn btn-secondary">Отправить повторно</button>
-            <div id="verifyMessage" class="message"></div>
-        </div> -->
-        
         <div id="passwordForm" style="display: none;">
             <h3>Введите пароль комнаты</h3>
             <div class="input-group">
@@ -274,7 +263,6 @@
     <script>
         let roomName = '';
         let roomId = '';
-        let pendingUserId = null;
         let currentUser = '';
         let currentToken = null;
         
@@ -322,7 +310,6 @@
             document.getElementById('authForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('verifyForm').style.display = 'none';
             clearMessages();
         }
         
@@ -330,12 +317,11 @@
             document.getElementById('authForm').style.display = 'none';
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('verifyForm').style.display = 'none';
             clearMessages();
         }
         
         function clearMessages() {
-            const messages = ['loginMessage', 'registerMessage', 'verifyMessage', 'passwordMessage'];
+            const messages = ['loginMessage', 'registerMessage', 'passwordMessage'];
             messages.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.innerHTML = '';
@@ -413,71 +399,19 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    pendingUserId = data.user_id;
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен на почту!</span>';
-                    document.getElementById('registerForm').style.display = 'none';
-                    document.getElementById('verifyForm').style.display = 'block';
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
-                }
-            } catch(e) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
-            }
-        }
-        
-        async function doVerify() {
-            const code = document.getElementById('verifyCode').value.trim();
-            const msgDiv = document.getElementById('verifyMessage');
-            
-            if (!code || code.length !== 6) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите 6-значный код</span>';
-                return;
-            }
-            
-            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Проверка...</span>';
-            
-            try {
-                const res = await fetch('/api/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: pendingUserId, code: code })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
+                    // Сразу сохраняем токен и авторизуем пользователя
                     currentUser = data.username;
                     currentToken = data.token;
                     localStorage.setItem('chat_token', currentToken);
                     localStorage.setItem('chat_username', currentUser);
                     
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Email подтверждён!</span>';
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Регистрация успешна!</span>';
                     
+                    // Показываем форму ввода пароля комнаты
                     setTimeout(() => {
-                        document.getElementById('verifyForm').style.display = 'none';
+                        document.getElementById('registerForm').style.display = 'none';
                         document.getElementById('passwordForm').style.display = 'block';
                     }, 1000);
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
-                }
-            } catch(e) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
-            }
-        }
-        
-        async function resendCode() {
-            if (!pendingUserId) return;
-            const msgDiv = document.getElementById('verifyMessage');
-            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Отправка...</span>';
-            
-            try {
-                const res = await fetch('/api/resend_code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: pendingUserId })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен повторно!</span>';
                 } else {
                     msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
