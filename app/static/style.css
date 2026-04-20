@@ -521,6 +521,24 @@ body {
     flex-direction: row-reverse;
 }
 
+.chat-message-header span:first-child {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.chat-message.own .chat-message-header span:first-child {
+    color: #4aac4a;
+}
+
+.chat-message.other .chat-message-header span:first-child {
+    color: #ff8c42;
+}
+
+.chat-message-header span:last-child {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+}
+
 /* Текст сообщения */
 .chat-message-text {
     background: rgba(26, 58, 26, 0.7);
