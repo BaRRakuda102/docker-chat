@@ -605,94 +605,121 @@ function closeImageViewer() {
 
 // ========== ЧАТ ==========
 function connectWebSocket() {
-    // Правильное определение протокола для HTTPS
+    // Определяем правильный протокол
     let protocol = 'ws:';
     if (window.location.protocol === 'https:') {
         protocol = 'wss:';
     }
     const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
-    console.log('WebSocket URL:', wsUrl);
+    console.log('🔌 Подключение к WebSocket:', wsUrl);
     
     ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-        console.log('WebSocket подключен');
+        console.log('✅ WebSocket подключен');
         document.getElementById('chatInput').disabled = false;
+        document.getElementById('chatInput').placeholder = 'Введите сообщение...';
         document.getElementById('chatInput').focus();
     };
     
     ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    const messagesDiv = document.getElementById('chatMessages');
-    
-    // Обработка обновления списка комнат
-    if (data.type === 'room_list_update') {
-        if (data.action === 'delete') {
-            roomsList = roomsList.filter(r => r.name !== data.room_name);
-            renderRooms();
-            if (currentRoom === data.room_name) {
-                alert(`Комната "${data.room_name}" была удалена создателем`);
+        console.log('📨 Получено сообщение:', event.data);
+        try {
+            const data = JSON.parse(event.data);
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            // Обработка обновления списка комнат
+            if (data.type === 'room_list_update') {
+                if (data.action === 'delete') {
+                    roomsList = roomsList.filter(r => r.name !== data.room_name);
+                    renderRooms();
+                    if (currentRoom === data.room_name) {
+                        alert(`Комната "${data.room_name}" была удалена создателем`);
+                        leaveToRooms();
+                    }
+                }
+                return;
+            }
+            
+            if (data.type === 'message') {
+                const isOwn = (data.username === currentUser);
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+                msgDiv.innerHTML = `
+                    <div class="chat-message-header">
+                        <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor: pointer;" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
+                        <span>${data.timestamp}</span>
+                    </div>
+                    <div class="chat-message-text">${escapeHtml(data.message)}</div>
+                `;
+                messagesDiv.appendChild(msgDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                if (data.username !== currentUser) playNotificationSound();
+            } else if (data.type === 'image') {
+                const isOwn = (data.username === currentUser);
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+                msgDiv.innerHTML = `
+                    <div class="chat-message-header">
+                        <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
+                        <span>${data.timestamp}</span>
+                    </div>
+                    <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
+                    ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
+                `;
+                messagesDiv.appendChild(msgDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } else if (data.type === 'system') {
+                const sysDiv = document.createElement('div');
+                sysDiv.className = 'system-message';
+                sysDiv.innerHTML = data.message;
+                messagesDiv.appendChild(sysDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            } else if (data.type === 'users') {
+                document.getElementById('chatUserCount').innerHTML = data.count;
+            } else if (data.type === 'kicked') {
+                alert(data.message);
+                leaveToRooms();
+            } else if (data.type === 'room_deleted') {
+                alert(data.message);
                 leaveToRooms();
             }
+        } catch (e) {
+            console.error('❌ Ошибка парсинга сообщения:', e);
         }
-        return;
-    }
+    };
     
-    if (data.type === 'message') {
-        const isOwn = (data.username === currentUser);
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-        msgDiv.innerHTML = `
-            <div class="chat-message-header">
-                <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor: pointer;" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
-                <span>${data.timestamp}</span>
-            </div>
-            <div class="chat-message-text">${escapeHtml(data.message)}</div>
-        `;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        if (data.username !== currentUser) playNotificationSound();
-    } else if (data.type === 'image') {
-        const isOwn = (data.username === currentUser);
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-        msgDiv.innerHTML = `
-            <div class="chat-message-header">
-                <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
-                <span>${data.timestamp}</span>
-            </div>
-            <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
-            ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
-        `;
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } else if (data.type === 'system') {
-        const sysDiv = document.createElement('div');
-        sysDiv.className = 'system-message';
-        sysDiv.innerHTML = data.message;
-        messagesDiv.appendChild(sysDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } else if (data.type === 'users') {
-        document.getElementById('chatUserCount').innerHTML = data.count;
-    } else if (data.type === 'kicked') {
-        alert(data.message);
-        leaveToRooms();
-    } else if (data.type === 'room_deleted') {
-        alert(data.message);
-        leaveToRooms();
-    }
-};
+    ws.onerror = (error) => {
+        console.error('❌ WebSocket ошибка:', error);
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('chatInput').placeholder = 'Ошибка соединения. Перезагрузите страницу.';
+    };
     
-    ws.onerror = (error) => console.error('WebSocket ошибка:', error);
-    ws.onclose = () => console.log('WebSocket отключен');
+    ws.onclose = () => {
+        console.log('🔌 WebSocket отключен');
+        document.getElementById('chatInput').disabled = true;
+        document.getElementById('chatInput').placeholder = 'Отключено. Перезагрузите страницу.';
+    };
 }
-
 function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
-    if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'message', message }));
+    
+    if (!message) {
+        console.log('❌ Пустое сообщение');
+        return;
+    }
+    
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.error('❌ WebSocket не подключен. Состояние:', ws ? ws.readyState : 'null');
+        alert('Нет соединения с чатом. Перезагрузите страницу.');
+        return;
+    }
+    
+    console.log('📤 Отправка сообщения:', message);
+    ws.send(JSON.stringify({ type: 'message', message: message }));
     input.value = '';
+    input.focus();
 }
 
 function showUserContextMenu(event, username) {
