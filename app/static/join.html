@@ -169,11 +169,6 @@
             margin-right: 8px;
         }
         
-        hr {
-            margin: 20px 0;
-            border-color: rgba(74, 172, 74, 0.3);
-        }
-        
         .button-group {
             display: flex;
             gap: 15px;
@@ -265,6 +260,7 @@
         let roomId = '';
         let currentUser = '';
         let currentToken = null;
+        let isAuthenticated = false;
         
         // Получаем ID из URL
         const path = window.location.pathname;
@@ -276,6 +272,7 @@
         if (savedToken && savedUser) {
             currentUser = savedUser;
             currentToken = savedToken;
+            isAuthenticated = true;
         }
         
         async function loadRoomInfo() {
@@ -291,10 +288,12 @@
                         <div class="creator-info">Создатель: ${escapeHtml(data.creator)}</div>
                     `;
                     
-                    if (currentToken && currentUser) {
+                    // Если пользователь уже авторизован, показываем форму ввода пароля
+                    if (isAuthenticated && currentToken && currentUser) {
                         document.getElementById('authForm').style.display = 'none';
                         document.getElementById('passwordForm').style.display = 'block';
                     } else {
+                        // Не авторизован — показываем выбор (войти или зарегистрироваться)
                         document.getElementById('authForm').style.display = 'block';
                     }
                 } else {
@@ -353,6 +352,7 @@
                     currentToken = data.token;
                     localStorage.setItem('chat_token', currentToken);
                     localStorage.setItem('chat_username', currentUser);
+                    isAuthenticated = true;
                     
                     msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Вход выполнен!</span>';
                     
@@ -399,15 +399,14 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    // Сразу сохраняем токен и авторизуем пользователя
                     currentUser = data.username;
                     currentToken = data.token;
                     localStorage.setItem('chat_token', currentToken);
                     localStorage.setItem('chat_username', currentUser);
+                    isAuthenticated = true;
                     
                     msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Регистрация успешна!</span>';
                     
-                    // Показываем форму ввода пароля комнаты
                     setTimeout(() => {
                         document.getElementById('registerForm').style.display = 'none';
                         document.getElementById('passwordForm').style.display = 'block';
