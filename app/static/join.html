@@ -8,41 +8,71 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a1a0a 0%, #000000 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
         .join-container {
-            max-width: 450px;
-            margin: 100px auto;
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
             background: rgba(13, 31, 13, 0.85);
             backdrop-filter: blur(20px);
             border-radius: 40px;
             border: 1px solid rgba(74, 172, 74, 0.4);
             padding: 40px;
             text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
+        
         .join-container h2 {
             color: white;
-            margin-bottom: 20px;
+            font-size: 28px;
+            margin-bottom: 10px;
         }
+        
+        .join-container h3 {
+            color: white;
+            font-size: 22px;
+            margin-bottom: 25px;
+        }
+        
         .join-container p {
-            color: rgba(255,255,255,0.7);
+            color: rgba(255, 255, 255, 0.7);
             margin-bottom: 20px;
+            line-height: 1.5;
         }
+        
         .room-name {
             color: #4aac4a;
             font-size: 28px;
             font-weight: bold;
-            margin: 20px 0;
+            margin: 15px 0;
+            word-break: break-all;
         }
-        .error {
-            color: #ff6b6b;
-            margin-top: 20px;
+        
+        .creator-info {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            margin-bottom: 25px;
         }
-        .success {
-            color: #4aac4a;
-            margin-top: 20px;
-        }
+        
         .input-group {
             margin-bottom: 20px;
         }
+        
         .input-group input {
             width: 100%;
             padding: 14px 18px;
@@ -51,11 +81,19 @@
             border-radius: 16px;
             color: white;
             font-size: 15px;
+            transition: all 0.3s;
         }
+        
         .input-group input:focus {
             outline: none;
             border-color: #4aac4a;
+            background: rgba(0, 0, 0, 0.7);
         }
+        
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
         .btn {
             width: 100%;
             padding: 14px;
@@ -64,34 +102,97 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s;
         }
+        
         .btn-primary {
             background: linear-gradient(135deg, #3a8c3a, #4aac4a);
             color: white;
         }
+        
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(74, 172, 74, 0.4);
         }
+        
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(74, 172, 74, 0.4);
             color: white;
             margin-top: 15px;
         }
+        
+        .btn-secondary:hover {
+            background: rgba(74, 172, 74, 0.2);
+        }
+        
         .switch-link {
             color: #4aac4a;
             cursor: pointer;
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .switch-link:hover {
             text-decoration: underline;
         }
+        
         .message {
             margin-top: 20px;
             padding: 12px;
             border-radius: 12px;
             font-size: 13px;
         }
+        
+        .message.success {
+            background: rgba(74, 172, 74, 0.2);
+            color: #4aac4a;
+        }
+        
+        .message.error {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff8888;
+        }
+        
+        .message.info {
+            background: rgba(74, 172, 74, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
         .loading {
             color: #4aac4a;
+            padding: 20px;
+        }
+        
+        .fa-spinner {
+            margin-right: 8px;
+        }
+        
+        hr {
+            margin: 20px 0;
+            border-color: rgba(74, 172, 74, 0.3);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .button-group .btn {
+            flex: 1;
+            margin-top: 0;
+        }
+        
+        @media (max-width: 500px) {
+            .join-container {
+                padding: 30px 20px;
+            }
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -106,10 +207,13 @@
         </div>
         
         <div id="authForm" style="display: none;">
-            <h3>Необходимо войти в аккаунт</h3>
-            <p>У вас есть аккаунт?</p>
-            <button onclick="showLogin()" class="btn btn-primary">Войти</button>
-            <button onclick="showRegister()" class="btn btn-secondary">Зарегистрироваться</button>
+            <div style="background: rgba(74, 172, 74, 0.15); border-radius: 20px; padding: 20px; margin: 15px 0;">
+                <p style="margin-bottom: 5px; color: rgba(255,255,255,0.8);">У вас есть аккаунт?</p>
+            </div>
+            <div class="button-group">
+                <button onclick="showLogin()" class="btn btn-primary">Войти</button>
+                <button onclick="showRegister()" class="btn btn-secondary">Зарегистрироваться</button>
+            </div>
         </div>
         
         <div id="loginForm" style="display: none;">
@@ -121,7 +225,7 @@
                 <input type="password" id="loginPassword" placeholder="Пароль">
             </div>
             <button onclick="doLogin()" class="btn btn-primary">Войти</button>
-            <p class="switch-link" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</p>
+            <div class="switch-link" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</div>
             <div id="loginMessage" class="message"></div>
         </div>
         
@@ -140,7 +244,7 @@
                 <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
             </div>
             <button onclick="doRegister()" class="btn btn-primary">Зарегистрироваться</button>
-            <p class="switch-link" onclick="showLogin()">Уже есть аккаунт? Войти</p>
+            <div class="switch-link" onclick="showLogin()">Уже есть аккаунт? Войти</div>
             <div id="registerMessage" class="message"></div>
         </div>
         
@@ -164,7 +268,7 @@
             <div id="passwordMessage" class="message"></div>
         </div>
         
-        <div id="errorMessage" class="error"></div>
+        <div id="errorMessage" class="message error" style="display: none;"></div>
     </div>
 
     <script>
@@ -195,16 +299,14 @@
                     roomName = data.room_name;
                     document.getElementById('roomInfo').innerHTML = `
                         <p>Вас пригласили в комнату:</p>
-                        <div class="room-name">#${roomName}</div>
-                        <p>Создатель: ${data.creator}</p>
+                        <div class="room-name">#${escapeHtml(roomName)}</div>
+                        <div class="creator-info">Создатель: ${escapeHtml(data.creator)}</div>
                     `;
                     
                     if (currentToken && currentUser) {
-                        // Уже авторизован, показываем ввод пароля
                         document.getElementById('authForm').style.display = 'none';
                         document.getElementById('passwordForm').style.display = 'block';
                     } else {
-                        // Не авторизован, предлагаем войти или зарегистрироваться
                         document.getElementById('authForm').style.display = 'block';
                     }
                 } else {
@@ -221,6 +323,7 @@
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('verifyForm').style.display = 'none';
+            clearMessages();
         }
         
         function showRegister() {
@@ -228,6 +331,15 @@
             document.getElementById('loginForm').style.display = 'none';
             document.getElementById('registerForm').style.display = 'block';
             document.getElementById('verifyForm').style.display = 'none';
+            clearMessages();
+        }
+        
+        function clearMessages() {
+            const messages = ['loginMessage', 'registerMessage', 'verifyMessage', 'passwordMessage'];
+            messages.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
         }
         
         async function doLogin() {
@@ -240,7 +352,7 @@
                 return;
             }
             
-            msgDiv.innerHTML = '<span style="color:#4aac4a;">Вход...</span>';
+            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Вход...</span>';
             
             try {
                 const res = await fetch('/api/login', {
@@ -263,7 +375,7 @@
                         document.getElementById('passwordForm').style.display = 'block';
                     }, 1000);
                 } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
             } catch(e) {
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
@@ -290,7 +402,7 @@
                 return;
             }
             
-            msgDiv.innerHTML = '<span style="color:#4aac4a;">Регистрация...</span>';
+            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Регистрация...</span>';
             
             try {
                 const res = await fetch('/api/register', {
@@ -302,11 +414,11 @@
                 
                 if (data.success) {
                     pendingUserId = data.user_id;
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен!</span>';
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен на почту!</span>';
                     document.getElementById('registerForm').style.display = 'none';
                     document.getElementById('verifyForm').style.display = 'block';
                 } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
             } catch(e) {
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
@@ -321,6 +433,8 @@
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите 6-значный код</span>';
                 return;
             }
+            
+            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Проверка...</span>';
             
             try {
                 const res = await fetch('/api/verify', {
@@ -343,7 +457,7 @@
                         document.getElementById('passwordForm').style.display = 'block';
                     }, 1000);
                 } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
             } catch(e) {
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
@@ -353,7 +467,7 @@
         async function resendCode() {
             if (!pendingUserId) return;
             const msgDiv = document.getElementById('verifyMessage');
-            msgDiv.innerHTML = '<span style="color:#4aac4a;">Отправка...</span>';
+            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Отправка...</span>';
             
             try {
                 const res = await fetch('/api/resend_code', {
@@ -365,7 +479,7 @@
                 if (data.success) {
                     msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен повторно!</span>';
                 } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
             } catch(e) {
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
@@ -381,7 +495,7 @@
                 return;
             }
             
-            msgDiv.innerHTML = '<span style="color:#4aac4a;">Проверка...</span>';
+            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Проверка...</span>';
             
             try {
                 const res = await fetch('/api/join_room', {
@@ -398,14 +512,19 @@
                         window.location.href = '/';
                     }, 1000);
                 } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
                 }
             } catch(e) {
                 msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
             }
         }
         
-        // Загружаем информацию о комнате
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         loadRoomInfo();
     </script>
 </body>
