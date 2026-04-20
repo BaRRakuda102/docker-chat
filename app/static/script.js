@@ -813,4 +813,98 @@ if (autoJoinRoom && autoJoinPassword && !currentRoom) {
     }, 1000);
 }
 
+// ========== ПРЕДПРОСМОТР ИЗОБРАЖЕНИЙ ==========
+
+let pendingImageFile = null;
+let pendingImagePreview = null;
+
+function showImagePreview(file) {
+    // Создаём модальное окно предпросмотра
+    let previewModal = document.getElementById('imagePreviewModal');
+    if (!previewModal) {
+        previewModal = document.createElement('div');
+        previewModal.id = 'imagePreviewModal';
+        previewModal.className = 'modal';
+        previewModal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h3>Предпросмотр изображения</h3>
+                    <button onclick="closeImagePreview()" class="close-btn">&times;</button>
+                </div>
+                <img id="previewImage" src="" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 15px;">
+                <div class="input-group">
+                    <input type="text" id="previewCaption" placeholder="Подпись (необязательно)" style="width: 100%;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="sendImageFromPreview()" class="btn btn-primary">Отправить</button>
+                    <button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('previewImage').src = e.target.result;
+        document.getElementById('previewCaption').value = '';
+        previewModal.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+    pendingImageFile = file;
+}
+
+function closeImagePreview() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) modal.style.display = 'none';
+    pendingImageFile = null;
+}
+
+async function sendImageFromPreview() {
+    if (!pendingImageFile) return;
+    
+    const caption = document.getElementById('previewCaption').value.trim();
+    closeImagePreview();
+    
+    const formData = new FormData();
+    formData.append('file', pendingImageFile);
+    
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.url && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'image',
+                url: data.url,
+                caption: caption
+            }));
+        }
+        pendingImageFile = null;
+    } catch(e) {
+        console.error('Ошибка загрузки:', e);
+        alert('Ошибка загрузки изображения');
+    }
+}
+
+// Переопределяем обработку вставки и выбора файла
+document.getElementById('chatInput')?.addEventListener('paste', function(e) {
+    const items = e.clipboardData.items;
+    for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            showImagePreview(file);
+            break;
+        }
+    }
+});
+
+document.getElementById('fileInput')?.addEventListener('change', function(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+        showImagePreview(files[0]);
+    }
+    this.value = '';
+});
+
 console.log('Script loaded successfully');

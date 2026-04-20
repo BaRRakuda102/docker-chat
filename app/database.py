@@ -6,12 +6,15 @@ import bcrypt
 import random
 import os
 
-# Создаём папку для БД если её нет
-os.makedirs("data", exist_ok=True)
+# Получаем URL базы данных из переменных окружения Railway
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/chat.db')
 
-DATABASE_URL = "sqlite:///./data/chat.db"
+# Для PostgreSQL нужно добавить параметры
+if DATABASE_URL and DATABASE_URL.startswith('postgres'):
+    # Добавляем параметры для подключения
+    DATABASE_URL = DATABASE_URL + '?sslmode=require'
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -31,7 +34,6 @@ class User(Base):
     is_superadmin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_seen = Column(DateTime, default=datetime.utcnow)
-    avatar_url = Column(String(500), default="/static/default-avatar.png")
     
     def set_password(self, password: str):
         salt = bcrypt.gensalt()

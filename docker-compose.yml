@@ -5,12 +5,21 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app
-      - ./uploads:/app/uploads
-      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/chatdb
+    depends_on:
+      - db
     restart: unless-stopped
 
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=chatdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
 volumes:
-  uploads:
-  data:
+  postgres_data:

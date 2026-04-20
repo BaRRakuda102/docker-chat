@@ -701,6 +701,213 @@ body, .glass-container, .rooms-page, .join-container, .modal-content, .profile-d
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Красивый скроллбар для чата */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #4aac4a;
+    border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #6acc6a;
+}
+
+/* Для Firefox */
+.chat-messages {
+    scrollbar-width: thin;
+    scrollbar-color: #4aac4a rgba(255, 255, 255, 0.08);
+}
+
+/* ========== МОБИЛЬНАЯ АДАПТАЦИЯ ========== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+    }
+    
+    /* Стартовая страница */
+    .glass-container {
+        flex-direction: column;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+    
+    .info-panel {
+        padding: 30px 20px;
+    }
+    
+    .logo i {
+        font-size: 48px;
+    }
+    
+    .logo h1 {
+        font-size: 28px;
+    }
+    
+    .info-panel h2 {
+        font-size: 22px;
+    }
+    
+    .features {
+        gap: 12px;
+    }
+    
+    .feature {
+        padding: 12px;
+    }
+    
+    .feature i {
+        font-size: 22px;
+    }
+    
+    .auth-panel {
+        width: 100%;
+        padding: 30px 20px;
+    }
+    
+    .form-title {
+        font-size: 24px;
+    }
+    
+    /* Страница комнат */
+    .rooms-page {
+        border-radius: 0;
+        padding: 20px;
+        min-height: 100vh;
+    }
+    
+    .rooms-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .header-buttons {
+        justify-content: space-between;
+    }
+    
+    .rooms-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .room-card {
+        padding: 10px;
+    }
+    
+    .room-icon {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .room-icon i {
+        font-size: 18px;
+    }
+    
+    .room-details h4 {
+        font-size: 12px;
+    }
+    
+    /* Чат */
+    .chat-app {
+        flex-direction: column;
+    }
+    
+    .chat-sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 200px;
+        overflow-y: auto;
+        border-right: none;
+        border-bottom: 1px solid #4aac4a;
+    }
+    
+    .chat-messages {
+        padding: 15px;
+    }
+    
+    .chat-message {
+        max-width: 85%;
+    }
+    
+    .chat-message-text {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+    
+    .chat-input-area {
+        padding: 10px 15px;
+    }
+    
+    .chat-input-area input {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+    
+    .chat-input-area button {
+        padding: 10px 20px;
+    }
+    
+    .attach-btn {
+        padding: 0 12px;
+    }
+    
+    /* Модальные окна */
+    .modal-content {
+        width: 90%;
+        margin: 0 20px;
+        padding: 20px;
+    }
+    
+    .profile-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 20px 20px 0 0;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .room-actions {
+        flex-direction: row;
+        gap: 8px;
+    }
+    
+    .settings-btn, .invite-btn, .leave-room-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .rooms-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chat-message {
+        max-width: 95%;
+    }
+    
+    .chat-messages {
+        padding: 10px;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+}
+
 .kick-btn {
     background: rgba(139, 58, 58, 0.5);
     border: none;
