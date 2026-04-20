@@ -503,15 +503,16 @@ async def register(request: Request, db: Session = Depends(get_db)):
         
         print(f"📝 Регистрация: {username}, {email}")
         
-        existing_user = db.query(User).filter(
-            (User.username == username) | (User.email == email)
-        ).first()
+        # Проверяем существование пользователя
+        existing_by_username = db.query(User).filter(User.username == username).first()
+        if existing_by_username:
+            return {"success": False, "error": "Имя пользователя уже занято"}
         
-        if existing_user:
-            if existing_user.username == username:
-                return {"success": False, "error": "Имя пользователя уже занято"}
+        existing_by_email = db.query(User).filter(User.email == email).first()
+        if existing_by_email:
             return {"success": False, "error": "Email уже зарегистрирован"}
         
+        # Создаём пользователя
         new_user = User(username=username, email=email)
         new_user.set_password(password)
         new_user.email_verified = True
@@ -531,7 +532,6 @@ async def register(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"❌ Ошибка: {e}")
         return {"success": False, "error": str(e)}
-
 @app.post("/api/login")
 async def login(request: Request, db: Session = Depends(get_db)):
     try:

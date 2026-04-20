@@ -7,6 +7,7 @@ let pendingUserId = null;
 let currentRoomId = null;
 let isRoomCreator = false;
 let isJoining = false;
+let currentRoom = localStorage.getItem('current_room') || '';
 
 // ========== ПЕРЕКЛЮЧЕНИЕ ФОРМ ==========
 function showRegisterForm() {
@@ -387,6 +388,7 @@ async function joinSelectedRoom() {
         if (data.success) {
             closeJoinRoomModal();
             currentRoom = pendingRoom;
+            localStorage.setItem('current_room', currentRoom);  // Сохраняем
             document.getElementById('roomsContainer').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
