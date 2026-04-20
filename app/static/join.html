@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Присоединиться к чату | Dark Chat</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233a8c3a'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.35em' font-size='70' fill='white' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .join-container {
+            max-width: 450px;
+            margin: 100px auto;
+            background: rgba(13, 31, 13, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 40px;
+            border: 1px solid rgba(74, 172, 74, 0.4);
+            padding: 40px;
+            text-align: center;
+        }
+        .join-container h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+        .join-container p {
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 20px;
+        }
+        .room-name {
+            color: #4aac4a;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .error {
+            color: #ff6b6b;
+            margin-top: 20px;
+        }
+        .success {
+            color: #4aac4a;
+            margin-top: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(74, 172, 74, 0.4);
+            border-radius: 16px;
+            color: white;
+            font-size: 15px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #4aac4a;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3a8c3a, #4aac4a);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(74, 172, 74, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(74, 172, 74, 0.4);
+            color: white;
+            margin-top: 15px;
+        }
+        .switch-link {
+            color: #4aac4a;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        .loading {
+            color: #4aac4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="join-container" id="joinContainer">
+        <i class="fas fa-door-open" style="font-size: 64px; color: #4aac4a; margin-bottom: 20px;"></i>
+        <h2>Присоединение к чату</h2>
+        
+        <div id="roomInfo">
+            <p>Загрузка информации о комнате...</p>
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Проверка...</div>
+        </div>
+        
+        <div id="authForm" style="display: none;">
+            <h3>Необходимо войти в аккаунт</h3>
+            <p>У вас есть аккаунт?</p>
+            <button onclick="showLogin()" class="btn btn-primary">Войти</button>
+            <button onclick="showRegister()" class="btn btn-secondary">Зарегистрироваться</button>
+        </div>
+        
+        <div id="loginForm" style="display: none;">
+            <h3>Вход в аккаунт</h3>
+            <div class="input-group">
+                <input type="text" id="loginUsername" placeholder="Имя пользователя или Email">
+            </div>
+            <div class="input-group">
+                <input type="password" id="loginPassword" placeholder="Пароль">
+            </div>
+            <button onclick="doLogin()" class="btn btn-primary">Войти</button>
+            <p class="switch-link" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</p>
+            <div id="loginMessage" class="message"></div>
+        </div>
+        
+        <div id="registerForm" style="display: none;">
+            <h3>Регистрация</h3>
+            <div class="input-group">
+                <input type="text" id="regUsername" placeholder="Имя пользователя">
+            </div>
+            <div class="input-group">
+                <input type="email" id="regEmail" placeholder="Email">
+            </div>
+            <div class="input-group">
+                <input type="password" id="regPassword" placeholder="Пароль">
+            </div>
+            <div class="input-group">
+                <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
+            </div>
+            <button onclick="doRegister()" class="btn btn-primary">Зарегистрироваться</button>
+            <p class="switch-link" onclick="showLogin()">Уже есть аккаунт? Войти</p>
+            <div id="registerMessage" class="message"></div>
+        </div>
+        
+        <div id="verifyForm" style="display: none;">
+            <h3>Подтверждение email</h3>
+            <p>Введите код из письма</p>
+            <div class="input-group">
+                <input type="text" id="verifyCode" placeholder="6-значный код" maxlength="6">
+            </div>
+            <button onclick="doVerify()" class="btn btn-primary">Подтвердить</button>
+            <button onclick="resendCode()" class="btn btn-secondary">Отправить повторно</button>
+            <div id="verifyMessage" class="message"></div>
+        </div>
+        
+        <div id="passwordForm" style="display: none;">
+            <h3>Введите пароль комнаты</h3>
+            <div class="input-group">
+                <input type="password" id="roomPassword" placeholder="Пароль комнаты">
+            </div>
+            <button onclick="joinRoom()" class="btn btn-primary">Войти в чат</button>
+            <div id="passwordMessage" class="message"></div>
+        </div>
+        
+        <div id="errorMessage" class="error"></div>
+    </div>
+
+    <script>
+        let roomName = '';
+        let roomId = '';
+        let pendingUserId = null;
+        let currentUser = '';
+        let currentToken = null;
+        
+        // Получаем ID из URL
+        const path = window.location.pathname;
+        roomId = path.split('/').pop();
+        
+        // Проверяем, есть ли сохранённый токен
+        const savedToken = localStorage.getItem('chat_token');
+        const savedUser = localStorage.getItem('chat_username');
+        if (savedToken && savedUser) {
+            currentUser = savedUser;
+            currentToken = savedToken;
+        }
+        
+        async function loadRoomInfo() {
+            try {
+                const res = await fetch(`/api/room_by_id/${roomId}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    roomName = data.room_name;
+                    document.getElementById('roomInfo').innerHTML = `
+                        <p>Вас пригласили в комнату:</p>
+                        <div class="room-name">#${roomName}</div>
+                        <p>Создатель: ${data.creator}</p>
+                    `;
+                    
+                    if (currentToken && currentUser) {
+                        // Уже авторизован, показываем ввод пароля
+                        document.getElementById('authForm').style.display = 'none';
+                        document.getElementById('passwordForm').style.display = 'block';
+                    } else {
+                        // Не авторизован, предлагаем войти или зарегистрироваться
+                        document.getElementById('authForm').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('roomInfo').innerHTML = '<p style="color: #ff6b6b;">Комната не найдена</p>';
+                }
+            } catch(e) {
+                document.getElementById('roomInfo').innerHTML = '<p style="color: #ff6b6b;">Ошибка загрузки</p>';
+                console.error('Ошибка:', e);
+            }
+        }
+        
+        function showLogin() {
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('verifyForm').style.display = 'none';
+        }
+        
+        function showRegister() {
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('verifyForm').style.display = 'none';
+        }
+        
+        async function doLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const msgDiv = document.getElementById('loginMessage');
+            
+            if (!username || !password) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите имя и пароль</span>';
+                return;
+            }
+            
+            msgDiv.innerHTML = '<span style="color:#4aac4a;">Вход...</span>';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentUser = data.username;
+                    currentToken = data.token;
+                    localStorage.setItem('chat_token', currentToken);
+                    localStorage.setItem('chat_username', currentUser);
+                    
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Вход выполнен!</span>';
+                    
+                    setTimeout(() => {
+                        document.getElementById('loginForm').style.display = 'none';
+                        document.getElementById('passwordForm').style.display = 'block';
+                    }, 1000);
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                }
+            } catch(e) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+            }
+        }
+        
+        async function doRegister() {
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regPasswordConfirm').value;
+            const msgDiv = document.getElementById('registerMessage');
+            
+            if (!username || !email || !password) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Заполните все поля</span>';
+                return;
+            }
+            if (password !== confirm) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароли не совпадают</span>';
+                return;
+            }
+            if (password.length < 6) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароль должен быть не менее 6 символов</span>';
+                return;
+            }
+            
+            msgDiv.innerHTML = '<span style="color:#4aac4a;">Регистрация...</span>';
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    pendingUserId = data.user_id;
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен!</span>';
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.getElementById('verifyForm').style.display = 'block';
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                }
+            } catch(e) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+            }
+        }
+        
+        async function doVerify() {
+            const code = document.getElementById('verifyCode').value.trim();
+            const msgDiv = document.getElementById('verifyMessage');
+            
+            if (!code || code.length !== 6) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите 6-значный код</span>';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: pendingUserId, code: code })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentUser = data.username;
+                    currentToken = data.token;
+                    localStorage.setItem('chat_token', currentToken);
+                    localStorage.setItem('chat_username', currentUser);
+                    
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Email подтверждён!</span>';
+                    
+                    setTimeout(() => {
+                        document.getElementById('verifyForm').style.display = 'none';
+                        document.getElementById('passwordForm').style.display = 'block';
+                    }, 1000);
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                }
+            } catch(e) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+            }
+        }
+        
+        async function resendCode() {
+            if (!pendingUserId) return;
+            const msgDiv = document.getElementById('verifyMessage');
+            msgDiv.innerHTML = '<span style="color:#4aac4a;">Отправка...</span>';
+            
+            try {
+                const res = await fetch('/api/resend_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: pendingUserId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Код отправлен повторно!</span>';
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                }
+            } catch(e) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+            }
+        }
+        
+        async function joinRoom() {
+            const password = document.getElementById('roomPassword').value;
+            const msgDiv = document.getElementById('passwordMessage');
+            
+            if (!password) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите пароль</span>';
+                return;
+            }
+            
+            msgDiv.innerHTML = '<span style="color:#4aac4a;">Проверка...</span>';
+            
+            try {
+                const res = await fetch('/api/join_room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room: roomName, password: password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Успешно! Перенаправление...</span>';
+                    localStorage.setItem('join_room', roomName);
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+                }
+            } catch(e) {
+                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+            }
+        }
+        
+        // Загружаем информацию о комнате
+        loadRoomInfo();
+    </script>
+</body>
+</html>

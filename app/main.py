@@ -230,6 +230,11 @@ async def get():
 @app.get("/join/{room_uuid}")
 async def join_page(room_uuid: str):
     with open("static/join.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())        
+
+@app.get("/join/{room_uuid}")
+async def join_page(room_uuid: str):
+    with open("static/join.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
 @app.get("/api/rooms")
