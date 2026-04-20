@@ -6,12 +6,11 @@ import bcrypt
 import random
 import os
 
-# Получаем URL базы данных из переменных окружения Railway
+# Получаем URL базы данных (PostgreSQL на Railway или SQLite локально)
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/chat.db')
 
-# Для PostgreSQL нужно добавить параметры
+# Для PostgreSQL на Railway
 if DATABASE_URL and DATABASE_URL.startswith('postgres'):
-    # Добавляем параметры для подключения
     DATABASE_URL = DATABASE_URL + '?sslmode=require'
 
 engine = create_engine(DATABASE_URL)

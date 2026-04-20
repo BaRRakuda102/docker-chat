@@ -1,4 +1,4 @@
-// ========== ПЕРЕМЕННЫЕ ==========
+// ========== ОСНОВНЫЕ ПЕРЕМЕННЫЕ ==========
 let ws = null;
 let currentUser = '';
 let currentRoom = '';
@@ -7,19 +7,34 @@ let pendingUserId = null;
 let currentRoomId = null;
 let isRoomCreator = false;
 let isJoining = false;
-let currentRoom = localStorage.getItem('current_room') || '';
+let pendingRoom = '';
+let pendingRoomPassword = null;
+let pendingImageFile = null;
 
-// ========== ПЕРЕКЛЮЧЕНИЕ ФОРМ ==========
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showMessage(elementId, text, isError = false) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.innerHTML = `<span style="color: ${isError ? '#ff6b6b' : '#4aac4a'}">${text}</span>`;
+        setTimeout(() => { if (el.innerHTML === `<span style="color: ${isError ? '#ff6b6b' : '#4aac4a'}">${text}</span>`) el.innerHTML = ''; }, 3000);
+    }
+}
+
+// ========== УПРАВЛЕНИЕ ФОРМАМИ ==========
 function showRegisterForm() {
     document.getElementById('loginFormContainer').style.display = 'none';
     document.getElementById('registerFormContainer').style.display = 'block';
-    document.getElementById('verifyFormContainer').style.display = 'none';
 }
 
 function showLoginForm() {
     document.getElementById('loginFormContainer').style.display = 'block';
     document.getElementById('registerFormContainer').style.display = 'none';
-    document.getElementById('verifyFormContainer').style.display = 'none';
 }
 
 // ========== РЕГИСТРАЦИЯ ==========
@@ -28,22 +43,12 @@ async function doRegister() {
     const email = document.getElementById('regEmail').value.trim();
     const password = document.getElementById('regPassword').value;
     const confirm = document.getElementById('regPasswordConfirm').value;
-    const msgDiv = document.getElementById('registerMessage');
     
-    if (!username || !email || !password) {
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Заполните все поля</span>';
-        return;
-    }
-    if (password !== confirm) {
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароли не совпадают</span>';
-        return;
-    }
-    if (password.length < 6) {
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароль должен быть не менее 6 символов</span>';
-        return;
-    }
+    if (!username || !email || !password) return showMessage('registerMessage', 'Заполните все поля', true);
+    if (password !== confirm) return showMessage('registerMessage', 'Пароли не совпадают', true);
+    if (password.length < 6) return showMessage('registerMessage', 'Пароль должен быть не менее 6 символов', true);
     
-    msgDiv.innerHTML = '<span style="color:#4aac4a;">Регистрация...</span>';
+    showMessage('registerMessage', 'Регистрация...');
     
     try {
         const res = await fetch('/api/register', {
@@ -57,9 +62,7 @@ async function doRegister() {
             localStorage.setItem('chat_token', data.token);
             localStorage.setItem('chat_username', data.username);
             currentUser = data.username;
-            
-            msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Регистрация успешна!</span>';
-            
+            showMessage('registerMessage', '✅ Регистрация успешна!');
             setTimeout(() => {
                 document.getElementById('authContainer').style.display = 'none';
                 document.getElementById('roomsContainer').style.display = 'block';
@@ -68,26 +71,20 @@ async function doRegister() {
                 loadUserProfile();
             }, 1000);
         } else {
-            msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+            showMessage('registerMessage', '❌ ' + data.error, true);
         }
     } catch(e) {
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+        showMessage('registerMessage', '❌ Ошибка: ' + e.message, true);
     }
 }
 
 // ========== ВХОД ==========
 async function doLogin() {
-    console.log('doLogin вызвана');
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
-    const msgDiv = document.getElementById('loginMessage');
+    if (!username || !password) return showMessage('loginMessage', 'Введите имя и пароль', true);
     
-    if (!username || !password) {
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите имя и пароль</span>';
-        return;
-    }
-    
-    msgDiv.innerHTML = '<span style="color:#4aac4a;">Вход...</span>';
+    showMessage('loginMessage', 'Вход...');
     
     try {
         const res = await fetch('/api/login', {
@@ -96,52 +93,36 @@ async function doLogin() {
             body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-        console.log('Ответ сервера:', data);
         
         if (data.success) {
             currentUser = data.username;
             localStorage.setItem('chat_token', data.token);
             localStorage.setItem('chat_username', currentUser);
-            
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('roomsContainer').style.display = 'block';
             document.getElementById('userNameDisplay').innerHTML = currentUser;
             loadRooms();
             loadUserProfile();
         } else {
-            msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+            showMessage('loginMessage', '❌ ' + data.error, true);
         }
     } catch(e) {
-        console.error('Ошибка:', e);
-        msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+        showMessage('loginMessage', '❌ Ошибка: ' + e.message, true);
     }
 }
 
 // ========== ПРОФИЛЬ ==========
 function toggleProfileMenu() {
-    const dropdown = document.getElementById('profileDropdown');
-    dropdown.classList.toggle('show');
+    document.getElementById('profileDropdown')?.classList.toggle('show');
 }
 
-document.addEventListener('click', function(event) {
+document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('profileDropdown');
     const userInfo = document.querySelector('.user-info');
-    if (dropdown && userInfo && !userInfo.contains(event.target) && !dropdown.contains(event.target)) {
+    if (dropdown && userInfo && !userInfo.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.classList.remove('show');
     }
 });
-
-function calculateAge(birthDate) {
-    if (!birthDate) return null;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-    }
-    return age;
-}
 
 async function loadUserProfile() {
     try {
@@ -151,20 +132,20 @@ async function loadUserProfile() {
             document.getElementById('profileUsername').innerHTML = data.username;
             document.getElementById('profileEmail').innerHTML = data.email;
             document.getElementById('displayName').innerHTML = data.display_name || data.username;
-            if (data.birth_date) {
-                const age = calculateAge(data.birth_date);
-                document.getElementById('userAge').innerHTML = `${age} лет (${data.birth_date})`;
-            } else {
-                document.getElementById('userAge').innerHTML = 'Не указан';
-            }
+            document.getElementById('userAge').innerHTML = data.birth_date ? `${calculateAge(data.birth_date)} лет (${data.birth_date})` : 'Не указан';
             document.getElementById('regDate').innerHTML = new Date(data.created_at).toLocaleDateString();
-            if (data.avatar_url) {
-                updateAvatarDisplay(data.avatar_url);
-            }
+            if (data.avatar_url) updateAvatarDisplay(data.avatar_url);
         }
-    } catch(e) {
-        console.error('Ошибка загрузки профиля:', e);
-    }
+    } catch(e) { console.error(e); }
+}
+
+function calculateAge(birthDate) {
+    if (!birthDate) return null;
+    const today = new Date(), birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
 }
 
 function showEditProfileModal() {
@@ -180,7 +161,6 @@ function closeEditProfileModal() {
 async function saveProfile() {
     const displayName = document.getElementById('editDisplayName').value.trim();
     const birthDate = document.getElementById('editBirthDate').value;
-    
     try {
         const res = await fetch('/api/user/update_profile', {
             method: 'POST',
@@ -192,12 +172,8 @@ async function saveProfile() {
             alert('Профиль обновлён!');
             closeEditProfileModal();
             loadUserProfile();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch(e) {
-        alert('Ошибка: ' + e.message);
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка: ' + e.message); }
 }
 
 // ========== АВАТАР ==========
@@ -205,57 +181,32 @@ async function uploadAvatar(file) {
     const formData = new FormData();
     formData.append('avatar', file);
     formData.append('username', currentUser);
-    
     try {
-        const res = await fetch('/api/user/upload_avatar', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/user/upload_avatar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
             updateAvatarDisplay(data.avatar_url + '?t=' + Date.now());
             alert('Аватар обновлён!');
             loadUserProfile();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки аватара:', e);
-        alert('Ошибка загрузки аватара');
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка загрузки аватара'); }
 }
 
 function updateAvatarDisplay(avatarUrl) {
-    const smallAvatar = document.getElementById('userAvatarSmall');
-    const largeAvatar = document.getElementById('userAvatarLarge');
-    const chatAvatar = document.getElementById('chatUserAvatar');
-    const editPreview = document.getElementById('editAvatarPreview');
-    
-    if (smallAvatar) smallAvatar.src = avatarUrl;
-    if (largeAvatar) largeAvatar.src = avatarUrl;
-    if (chatAvatar) chatAvatar.src = avatarUrl;
-    if (editPreview) editPreview.src = avatarUrl;
+    ['userAvatarSmall', 'userAvatarLarge', 'chatUserAvatar', 'editAvatarPreview'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = avatarUrl;
+    });
 }
 
 document.getElementById('avatarInput')?.addEventListener('change', function(e) {
     const file = e.target.files[0];
-    if (file) {
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Файл слишком большой. Максимальный размер 5MB');
-            return;
-        }
-        if (!file.type.startsWith('image/')) {
-            alert('Пожалуйста, выберите изображение');
-            return;
-        }
+    if (file && file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
         const reader = new FileReader();
-        reader.onload = function(event) {
-            const editPreview = document.getElementById('editAvatarPreview');
-            if (editPreview) editPreview.src = event.target.result;
-        };
+        reader.onload = event => { document.getElementById('editAvatarPreview').src = event.target.result; };
         reader.readAsDataURL(file);
         uploadAvatar(file);
-    }
+    } else alert('Файл должен быть изображением до 5MB');
 });
 
 // ========== КОМНАТЫ ==========
@@ -263,41 +214,30 @@ async function loadRooms() {
     try {
         const res = await fetch('/api/rooms');
         const data = await res.json();
-        if (data.success) {
-            roomsList = data.rooms;
-            renderRooms();
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки комнат:', e);
-        roomsList = [];
+        roomsList = data.success ? data.rooms : [];
         renderRooms();
-    }
+    } catch(e) { roomsList = []; renderRooms(); }
 }
 
 function renderRooms() {
     const container = document.getElementById('roomsList');
     if (!container) return;
-    if (roomsList.length === 0) {
+    if (!roomsList.length) {
         container.innerHTML = '<div class="empty-rooms"><i class="fas fa-comment-slash"></i><p>Нет комнат</p><small>Создайте первую комнату</small></div>';
     } else {
         container.innerHTML = roomsList.map(room => `
             <div class="room-card" onclick="promptJoinRoom('${room.name}')">
                 <div class="room-icon"><i class="fas fa-lock"></i></div>
-                <div class="room-details">
-                    <h4>${escapeHtml(room.name)}</h4>
-                    <p>Создал: ${escapeHtml(room.creator)}</p>
-                </div>
+                <div class="room-details"><h4>${escapeHtml(room.name)}</h4><p>Создал: ${escapeHtml(room.creator)}</p></div>
             </div>
         `).join('');
     }
 }
 
 function filterRooms() {
-    const searchTerm = document.getElementById('searchRoomsInput').value.toLowerCase();
-    const roomCards = document.querySelectorAll('.room-card');
-    roomCards.forEach(card => {
-        const roomName = card.querySelector('h4').innerText.toLowerCase();
-        card.style.display = roomName.includes(searchTerm) ? 'flex' : 'none';
+    const term = document.getElementById('searchRoomsInput').value.toLowerCase();
+    document.querySelectorAll('.room-card').forEach(card => {
+        card.style.display = card.querySelector('h4').innerText.toLowerCase().includes(term) ? 'flex' : 'none';
     });
 }
 
@@ -307,21 +247,13 @@ function showCreateRoomModal() {
     document.getElementById('newRoomPassword').value = '';
 }
 
-function closeCreateRoomModal() {
-    document.getElementById('createRoomModal').style.display = 'none';
-}
+function closeCreateRoomModal() { document.getElementById('createRoomModal').style.display = 'none'; }
 
 async function createNewRoom() {
     const name = document.getElementById('newRoomName').value.trim();
     const password = document.getElementById('newRoomPassword').value;
-    if (!name || !password) {
-        alert('Заполните все поля');
-        return;
-    }
-    if (name.length < 3) {
-        alert('Название комнаты должно быть не менее 3 символов');
-        return;
-    }
+    if (!name || !password) return alert('Заполните все поля');
+    if (name.length < 3) return alert('Название не менее 3 символов');
     try {
         const res = await fetch('/api/create_room', {
             method: 'POST',
@@ -333,22 +265,14 @@ async function createNewRoom() {
             alert('Комната создана!');
             closeCreateRoomModal();
             loadRooms();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch(e) {
-        alert('Ошибка: ' + e.message);
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка: ' + e.message); }
 }
-
-let pendingRoom = '';
-let pendingRoomPassword = null;
 
 function promptJoinRoom(roomName, presetPassword = null) {
     if (isJoining) return;
     pendingRoom = roomName;
     pendingRoomPassword = presetPassword;
-    
     if (presetPassword) {
         joinSelectedRoom();
     } else {
@@ -358,37 +282,25 @@ function promptJoinRoom(roomName, presetPassword = null) {
     }
 }
 
-function closeJoinRoomModal() {
-    document.getElementById('joinRoomModal').style.display = 'none';
-}
+function closeJoinRoomModal() { document.getElementById('joinRoomModal').style.display = 'none'; }
 
 async function joinSelectedRoom() {
     if (isJoining) return;
-    
-    let password = pendingRoomPassword;
-    if (!password) {
-        password = document.getElementById('roomPassword').value;
-    }
-    
-    if (!password) {
-        alert('Введите пароль');
-        return;
-    }
+    const password = pendingRoomPassword || document.getElementById('roomPassword').value;
+    if (!password) return alert('Введите пароль');
     
     isJoining = true;
-    
     try {
         const res = await fetch('/api/join_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room: pendingRoom, password: password })
+            body: JSON.stringify({ room: pendingRoom, password })
         });
         const data = await res.json();
-        
         if (data.success) {
             closeJoinRoomModal();
             currentRoom = pendingRoom;
-            localStorage.setItem('current_room', currentRoom);  // Сохраняем
+            localStorage.setItem('current_room', currentRoom);
             document.getElementById('roomsContainer').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
@@ -397,23 +309,15 @@ async function joinSelectedRoom() {
             document.getElementById('chatMessages').innerHTML = '';
             await updateRoomInfo();
             connectWebSocket();
-            
             localStorage.removeItem('join_room');
-            localStorage.removeItem('auto_join_room');
-            localStorage.removeItem('auto_join_password');
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch(e) {
-        alert('Ошибка: ' + e.message);
-    } finally {
-        isJoining = false;
-        pendingRoomPassword = null;
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка: ' + e.message); }
+    finally { isJoining = false; pendingRoomPassword = null; }
 }
 
 function leaveToRooms() {
     if (ws) ws.close();
+    localStorage.removeItem('current_room');
     document.getElementById('chatContainer').style.display = 'none';
     document.getElementById('roomsContainer').style.display = 'block';
     loadRooms();
@@ -422,29 +326,23 @@ function leaveToRooms() {
 // ========== ПРИГЛАШЕНИЯ ==========
 async function updateRoomInfo() {
     try {
-        const response = await fetch(`/api/rooms/${currentRoom}/info`);
-        const data = await response.json();
+        const res = await fetch(`/api/rooms/${currentRoom}/info`);
+        const data = await res.json();
         if (data.success) {
             currentRoomId = data.room.id;
             isRoomCreator = (data.room.creator === currentUser);
-            const settingsBtn = document.getElementById('roomSettingsBtn');
-            if (settingsBtn) settingsBtn.style.display = isRoomCreator ? 'flex' : 'none';
+            const btn = document.getElementById('roomSettingsBtn');
+            if (btn) btn.style.display = isRoomCreator ? 'flex' : 'none';
         }
-    } catch (error) {
-        console.error('Ошибка обновления информации:', error);
-    }
+    } catch(e) { console.error(e); }
 }
 
 function showInviteModal() {
-    const inviteLink = `${window.location.origin}/join/${currentRoomId}`;
-    document.getElementById('inviteLinkInput').value = inviteLink;
+    document.getElementById('inviteLinkInput').value = `${window.location.origin}/join/${currentRoomId}`;
     document.getElementById('inviteModal').style.display = 'flex';
 }
 
-function closeInviteModal() {
-    document.getElementById('inviteModal').style.display = 'none';
-}
-
+function closeInviteModal() { document.getElementById('inviteModal').style.display = 'none'; }
 function copyInviteLink() {
     const input = document.getElementById('inviteLinkInput');
     input.select();
@@ -452,95 +350,77 @@ function copyInviteLink() {
     alert('Ссылка скопирована!');
 }
 
-// ========== УПРАВЛЕНИЕ КОМНАТОЙ ==========
+// ========== НАСТРОЙКИ КОМНАТЫ ==========
 async function showRoomSettings() {
     try {
-        const response = await fetch(`/api/rooms/${currentRoom}/info`);
-        const data = await response.json();
+        const res = await fetch(`/api/rooms/${currentRoom}/info`);
+        const data = await res.json();
         if (data.success) {
             document.getElementById('settingsRoomName').textContent = data.room.name;
             document.getElementById('settingsRoomCreator').textContent = data.room.creator;
             document.getElementById('settingsMemberCount').textContent = data.room.member_count;
             document.getElementById('settingsRoomId').textContent = data.room.id;
             await loadRoomMembers();
-            const deleteSection = document.getElementById('deleteRoomSection');
-            if (deleteSection) deleteSection.style.display = isRoomCreator ? 'block' : 'none';
+            document.getElementById('deleteRoomSection').style.display = isRoomCreator ? 'block' : 'none';
             document.getElementById('roomSettingsModal').style.display = 'flex';
         }
-    } catch (error) {
-        alert('Не удалось загрузить информацию о комнате');
-    }
+    } catch(e) { alert('Не удалось загрузить информацию'); }
 }
 
-function closeRoomSettings() {
-    document.getElementById('roomSettingsModal').style.display = 'none';
-}
+function closeRoomSettings() { document.getElementById('roomSettingsModal').style.display = 'none'; }
 
 async function loadRoomMembers() {
     try {
-        const response = await fetch(`/api/rooms/${currentRoom}/members`);
-        const data = await response.json();
-        if (data.success && data.members) {
-            const membersList = document.getElementById('roomMembersList');
-            membersList.innerHTML = data.members.map(member => `
+        const res = await fetch(`/api/rooms/${currentRoom}/members`);
+        const data = await res.json();
+        const container = document.getElementById('roomMembersList');
+        if (container && data.success) {
+            container.innerHTML = data.members.map(m => `
                 <div class="member-item">
-                    <span class="member-name">${escapeHtml(member)} ${member === currentUser ? '(Вы)' : ''}</span>
-                    ${member !== currentUser && isRoomCreator ? `<button onclick="kickUser('${member}')" class="kick-btn">Выгнать</button>` : ''}
+                    <span class="member-name">${escapeHtml(m)} ${m === currentUser ? '(Вы)' : ''}</span>
+                    ${m !== currentUser && isRoomCreator ? `<button onclick="kickUser('${m}')" class="kick-btn">Выгнать</button>` : ''}
                 </div>
             `).join('');
         }
-    } catch (error) {
-        console.error('Ошибка загрузки участников:', error);
-    }
+    } catch(e) { console.error(e); }
 }
 
 async function renameRoom() {
     const newName = document.getElementById('editRoomName').value.trim();
-    if (!newName || newName.length < 3) {
-        alert('Введите корректное название (минимум 3 символа)');
-        return;
-    }
+    if (!newName || newName.length < 3) return alert('Название не менее 3 символов');
     try {
-        const response = await fetch('/api/rooms/rename', {
+        const res = await fetch('/api/rooms/rename', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ old_name: currentRoom, new_name: newName, username: currentUser })
         });
-        const data = await response.json();
+        const data = await res.json();
         if (data.success) {
-            alert('Название комнаты изменено!');
+            alert('Название изменено!');
             currentRoom = newName;
             document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
             document.getElementById('chatRoomTitle').innerHTML = currentRoom;
             closeRoomSettings();
             loadRooms();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch (error) {
-        alert('Ошибка соединения с сервером');
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка соединения'); }
 }
 
 async function kickUser(username) {
-    if (!confirm(`Выгнать пользователя ${username} из комнаты?`)) return;
+    if (!confirm(`Выгнать ${username}?`)) return;
     try {
-        const response = await fetch('/api/rooms/kick', {
+        const res = await fetch('/api/rooms/kick', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room_name: currentRoom, username: username, admin: currentUser })
+            body: JSON.stringify({ room_name: currentRoom, username, admin: currentUser })
         });
-        const data = await response.json();
+        const data = await res.json();
         if (data.success) {
-            alert(`Пользователь ${username} выгнан из комнаты`);
+            alert(`Пользователь ${username} выгнан`);
             await loadRoomMembers();
             await updateRoomInfo();
-        } else {
-            alert('Ошибка: ' + data.error);
-        }
-    } catch (error) {
-        alert('Ошибка соединения с сервером');
-    }
+        } else alert('Ошибка: ' + data.error);
+    } catch(e) { alert('Ошибка соединения'); }
 }
 
 function confirmDeleteRoom() {
@@ -549,308 +429,46 @@ function confirmDeleteRoom() {
     document.getElementById('confirmDeleteModal').style.display = 'flex';
 }
 
-function closeConfirmDelete() {
-    document.getElementById('confirmDeleteModal').style.display = 'none';
-}
+function closeConfirmDelete() { document.getElementById('confirmDeleteModal').style.display = 'none'; }
 
 async function deleteRoom() {
     closeConfirmDelete();
     try {
-        const response = await fetch(`/api/rooms/delete/${currentRoom}?username=${encodeURIComponent(currentUser)}`, {
-            method: 'DELETE'
-        });
-        const data = await response.json();
+        const res = await fetch(`/api/rooms/delete/${currentRoom}?username=${encodeURIComponent(currentUser)}`, { method: 'DELETE' });
+        const data = await res.json();
         if (data.success) {
-            alert(`Комната "${currentRoom}" успешно удалена`);
+            alert(`Комната "${currentRoom}" удалена`);
             if (ws) ws.close();
+            localStorage.removeItem('current_room');
             document.getElementById('chatContainer').style.display = 'none';
             document.getElementById('roomsContainer').style.display = 'block';
             await loadRooms();
-        } else {
-            alert('Ошибка: ' + (data.error || 'Не удалось удалить комнату'));
-        }
-    } catch (error) {
-        alert('Ошибка соединения с сервером');
-    }
-}
-
-// ========== ОТПРАВКА ФАЙЛОВ ==========
-async function uploadFile(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-        const res = await fetch('/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.url) {
-            if (file.type.startsWith('image/')) {
-                ws.send(JSON.stringify({ type: 'image', url: data.url, caption: '' }));
-            } else {
-                ws.send(JSON.stringify({ type: 'file', url: data.url, filename: file.name, size: file.size }));
-            }
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки файла:', e);
-    }
-}
-
-// ========== ПРОСМОТР ИЗОБРАЖЕНИЙ ==========
-function openImageViewer(imageUrl) {
-    const modal = document.getElementById('imageViewerModal');
-    const img = document.getElementById('viewerImage');
-    img.src = imageUrl;
-    modal.style.display = 'flex';
-}
-
-function closeImageViewer() {
-    document.getElementById('imageViewerModal').style.display = 'none';
-}
-
-// ========== ЧАТ ==========
-function connectWebSocket() {
-    // Определяем правильный протокол
-    let protocol = 'ws:';
-    if (window.location.protocol === 'https:') {
-        protocol = 'wss:';
-    }
-    const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
-    console.log('🔌 Подключение к WebSocket:', wsUrl);
-    
-    ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-        console.log('✅ WebSocket подключен');
-        document.getElementById('chatInput').disabled = false;
-        document.getElementById('chatInput').placeholder = 'Введите сообщение...';
-        document.getElementById('chatInput').focus();
-    };
-    
-    ws.onmessage = (event) => {
-        console.log('📨 Получено сообщение:', event.data);
-        try {
-            const data = JSON.parse(event.data);
-            const messagesDiv = document.getElementById('chatMessages');
-            
-            // Обработка обновления списка комнат
-            if (data.type === 'room_list_update') {
-                if (data.action === 'delete') {
-                    roomsList = roomsList.filter(r => r.name !== data.room_name);
-                    renderRooms();
-                    if (currentRoom === data.room_name) {
-                        alert(`Комната "${data.room_name}" была удалена создателем`);
-                        leaveToRooms();
-                    }
-                }
-                return;
-            }
-            
-            if (data.type === 'message') {
-                const isOwn = (data.username === currentUser);
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-                msgDiv.innerHTML = `
-                    <div class="chat-message-header">
-                        <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor: pointer;" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
-                        <span>${data.timestamp}</span>
-                    </div>
-                    <div class="chat-message-text">${escapeHtml(data.message)}</div>
-                `;
-                messagesDiv.appendChild(msgDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                if (data.username !== currentUser) playNotificationSound();
-            } else if (data.type === 'image') {
-                const isOwn = (data.username === currentUser);
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-                msgDiv.innerHTML = `
-                    <div class="chat-message-header">
-                        <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
-                        <span>${data.timestamp}</span>
-                    </div>
-                    <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
-                    ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
-                `;
-                messagesDiv.appendChild(msgDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            } else if (data.type === 'system') {
-                const sysDiv = document.createElement('div');
-                sysDiv.className = 'system-message';
-                sysDiv.innerHTML = data.message;
-                messagesDiv.appendChild(sysDiv);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            } else if (data.type === 'users') {
-                document.getElementById('chatUserCount').innerHTML = data.count;
-            } else if (data.type === 'kicked') {
-                alert(data.message);
-                leaveToRooms();
-            } else if (data.type === 'room_deleted') {
-                alert(data.message);
-                leaveToRooms();
-            }
-        } catch (e) {
-            console.error('❌ Ошибка парсинга сообщения:', e);
-        }
-    };
-    
-    ws.onerror = (error) => {
-        console.error('❌ WebSocket ошибка:', error);
-        document.getElementById('chatInput').disabled = true;
-        document.getElementById('chatInput').placeholder = 'Ошибка соединения. Перезагрузите страницу.';
-    };
-    
-    ws.onclose = () => {
-        console.log('🔌 WebSocket отключен');
-        document.getElementById('chatInput').disabled = true;
-        document.getElementById('chatInput').placeholder = 'Отключено. Перезагрузите страницу.';
-    };
-}
-function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    
-    if (!message) {
-        console.log('❌ Пустое сообщение');
-        return;
-    }
-    
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        console.error('❌ WebSocket не подключен. Состояние:', ws ? ws.readyState : 'null');
-        alert('Нет соединения с чатом. Перезагрузите страницу.');
-        return;
-    }
-    
-    console.log('📤 Отправка сообщения:', message);
-    ws.send(JSON.stringify({ type: 'message', message: message }));
-    input.value = '';
-    input.focus();
-}
-
-function showUserContextMenu(event, username) {
-    event.stopPropagation();
-    const menu = document.createElement('div');
-    menu.className = 'context-menu';
-    menu.style.position = 'fixed';
-    menu.style.left = event.pageX + 'px';
-    menu.style.top = event.pageY + 'px';
-    menu.style.backgroundColor = '#0d1f0d';
-    menu.style.border = '1px solid #4aac4a';
-    menu.style.borderRadius = '12px';
-    menu.style.padding = '8px 0';
-    menu.style.zIndex = '1000';
-    menu.innerHTML = `
-        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="viewUserProfile('${username}'); this.parentElement.remove();">👤 Профиль</div>
-        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="mentionUser('${username}'); this.parentElement.remove();">@ Отметить</div>
-        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="startPrivateChat('${username}'); this.parentElement.remove();">🔒 Написать лично</div>
-    `;
-    document.body.appendChild(menu);
-    setTimeout(() => document.addEventListener('click', function closeMenu(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeMenu); } }), 10);
-}
-
-function viewUserProfile(username) { alert(`Профиль пользователя ${username}`); }
-function mentionUser(username) {
-    const input = document.getElementById('chatInput');
-    if (input) input.value += `@${username} `;
-}
-async function startPrivateChat(username) { alert(`Личный чат с ${username} (в разработке)`); }
-
-document.getElementById('chatInput')?.addEventListener('paste', function(e) {
-    const items = e.clipboardData.items;
-    for (const item of items) {
-        if (item.type.indexOf('image') !== -1) {
-            const file = item.getAsFile();
-            uploadFile(file);
-            break;
-        }
-    }
-});
-
-document.getElementById('fileInput')?.addEventListener('change', function(e) {
-    const files = e.target.files;
-    for (const file of files) uploadFile(file);
-    this.value = '';
-});
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function playNotificationSound() {
-    const audio = document.getElementById('notificationSound');
-    if (audio) audio.play().catch(e => console.log('Звук не воспроизведён'));
-}
-
-function logout() {
-    localStorage.clear();
-    location.reload();
-}
-
-// Проверка сохранённой сессии
-const savedToken = localStorage.getItem('chat_token');
-const savedUser = localStorage.getItem('chat_username');
-if (savedToken && savedUser) {
-    currentUser = savedUser;
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('roomsContainer').style.display = 'block';
-    document.getElementById('userNameDisplay').innerHTML = currentUser;
-    loadRooms();
-    loadUserProfile();
-}
-
-// Проверка приглашения
-const joinRoomFromInvite = localStorage.getItem('join_room');
-if (joinRoomFromInvite && !currentRoom) {
-    localStorage.removeItem('join_room');
-    setTimeout(() => promptJoinRoom(joinRoomFromInvite), 500);
-}
-
-// Автоматический вход в комнату после приглашения
-const autoJoinRoom = localStorage.getItem('auto_join_room');
-const autoJoinPassword = localStorage.getItem('auto_join_password');
-if (autoJoinRoom && autoJoinPassword && !currentRoom) {
-    localStorage.removeItem('auto_join_room');
-    localStorage.removeItem('auto_join_password');
-    setTimeout(() => {
-        promptJoinRoom(autoJoinRoom, autoJoinPassword);
-    }, 1000);
+        } else alert('Ошибка: ' + (data.error || 'Не удалось удалить'));
+    } catch(e) { alert('Ошибка соединения'); }
 }
 
 // ========== ПРЕДПРОСМОТР ИЗОБРАЖЕНИЙ ==========
-
-let pendingImageFile = null;
-let pendingImagePreview = null;
-
 function showImagePreview(file) {
-    // Создаём модальное окно предпросмотра
-    let previewModal = document.getElementById('imagePreviewModal');
-    if (!previewModal) {
-        previewModal = document.createElement('div');
-        previewModal.id = 'imagePreviewModal';
-        previewModal.className = 'modal';
-        previewModal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px; text-align: center;">
-                <div class="modal-header">
-                    <h3>Предпросмотр изображения</h3>
-                    <button onclick="closeImagePreview()" class="close-btn">&times;</button>
-                </div>
-                <img id="previewImage" src="" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 15px;">
-                <div class="input-group">
-                    <input type="text" id="previewCaption" placeholder="Подпись (необязательно)" style="width: 100%;">
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="sendImageFromPreview()" class="btn btn-primary">Отправить</button>
-                    <button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button>
-                </div>
+    let modal = document.getElementById('imagePreviewModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imagePreviewModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:500px; text-align:center">
+                <div class="modal-header"><h3>Предпросмотр</h3><button onclick="closeImagePreview()" class="close-btn">&times;</button></div>
+                <img id="previewImage" style="max-width:100%; max-height:300px; border-radius:12px; margin-bottom:15px">
+                <div class="input-group"><input type="text" id="previewCaption" placeholder="Подпись (необязательно)"></div>
+                <div style="display:flex; gap:10px"><button onclick="sendImageFromPreview()" class="btn btn-primary">Отправить</button><button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button></div>
             </div>
         `;
-        document.body.appendChild(previewModal);
+        document.body.appendChild(modal);
     }
-    
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = e => {
         document.getElementById('previewImage').src = e.target.result;
         document.getElementById('previewCaption').value = '';
-        previewModal.style.display = 'flex';
+        modal.style.display = 'flex';
     };
     reader.readAsDataURL(file);
     pendingImageFile = file;
@@ -864,49 +482,167 @@ function closeImagePreview() {
 
 async function sendImageFromPreview() {
     if (!pendingImageFile) return;
-    
     const caption = document.getElementById('previewCaption').value.trim();
     closeImagePreview();
-    
     const formData = new FormData();
     formData.append('file', pendingImageFile);
-    
     try {
         const res = await fetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.url && ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'image',
-                url: data.url,
-                caption: caption
-            }));
+        if (data.url && ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'image', url: data.url, caption }));
         }
-        pendingImageFile = null;
-    } catch(e) {
-        console.error('Ошибка загрузки:', e);
-        alert('Ошибка загрузки изображения');
+    } catch(e) { console.error(e); alert('Ошибка загрузки'); }
+    pendingImageFile = null;
+}
+
+// ========== ВЕБ-СОКЕТ ==========
+function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        console.log('WebSocket подключен');
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('chatInput').focus();
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const messagesDiv = document.getElementById('chatMessages');
+        
+        if (data.type === 'room_list_update' && data.action === 'delete') {
+            roomsList = roomsList.filter(r => r.name !== data.room_name);
+            renderRooms();
+            if (currentRoom === data.room_name) {
+                alert(`Комната "${data.room_name}" удалена`);
+                leaveToRooms();
+            }
+            return;
+        }
+        
+        if (data.type === 'message') {
+            const isOwn = data.username === currentUser;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+            msgDiv.innerHTML = `
+                <div class="chat-message-header">
+                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor:pointer" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
+                    <span>${data.timestamp}</span>
+                </div>
+                <div class="chat-message-text">${escapeHtml(data.message)}</div>
+            `;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            if (!isOwn) playNotificationSound();
+        } else if (data.type === 'image') {
+            const isOwn = data.username === currentUser;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+            msgDiv.innerHTML = `
+                <div class="chat-message-header">
+                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
+                    <span>${data.timestamp}</span>
+                </div>
+                <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
+                ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
+            `;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else if (data.type === 'system') {
+            const sysDiv = document.createElement('div');
+            sysDiv.className = 'system-message';
+            sysDiv.innerHTML = data.message;
+            messagesDiv.appendChild(sysDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else if (data.type === 'users') {
+            document.getElementById('chatUserCount').innerHTML = data.count;
+        } else if (data.type === 'kicked' || data.type === 'room_deleted') {
+            alert(data.message);
+            leaveToRooms();
+        }
+    };
+    
+    ws.onerror = () => console.error('WebSocket ошибка');
+    ws.onclose = () => console.log('WebSocket отключен');
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'message', message }));
+    input.value = '';
+}
+
+function showUserContextMenu(event, username) {
+    event.stopPropagation();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    Object.assign(menu.style, { position: 'fixed', left: event.pageX + 'px', top: event.pageY + 'px', backgroundColor: '#0d1f0d', border: '1px solid #4aac4a', borderRadius: '12px', padding: '8px 0', zIndex: '1000' });
+    menu.innerHTML = `
+        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="viewUserProfile('${username}'); this.parentElement.remove();">👤 Профиль</div>
+        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="mentionUser('${username}'); this.parentElement.remove();">@ Отметить</div>
+        <div style="padding:8px 16px; cursor:pointer; color:white" onclick="startPrivateChat('${username}'); this.parentElement.remove();">🔒 Написать лично</div>
+    `;
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('click', function close(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); } }), 10);
+}
+
+function viewUserProfile(username) { alert(`Профиль ${username}`); }
+function mentionUser(username) { document.getElementById('chatInput').value += `@${username} `; }
+function startPrivateChat(username) { alert(`Личный чат с ${username} (в разработке)`); }
+
+document.getElementById('chatInput')?.addEventListener('paste', e => {
+    const item = e.clipboardData.items[0];
+    if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        showImagePreview(item.getAsFile());
+    }
+});
+
+document.getElementById('fileInput')?.addEventListener('change', e => {
+    if (e.target.files.length) showImagePreview(e.target.files[0]);
+    e.target.value = '';
+});
+
+function openImageViewer(url) {
+    const modal = document.getElementById('imageViewerModal');
+    if (!modal) {
+        const m = document.createElement('div');
+        m.id = 'imageViewerModal';
+        m.className = 'modal';
+        m.innerHTML = `<div class="modal-content" style="max-width:90%; background:transparent"><button onclick="closeImageViewer()" class="close-btn" style="position:absolute; top:20px; right:30px; background:rgba(0,0,0,0.5); border-radius:50%; width:40px; height:40px">&times;</button><img id="viewerImage" style="max-width:90vw; max-height:80vh; border-radius:16px"></div>`;
+        document.body.appendChild(m);
+    }
+    document.getElementById('viewerImage').src = url;
+    document.getElementById('imageViewerModal').style.display = 'flex';
+}
+
+function closeImageViewer() { document.getElementById('imageViewerModal')?.remove(); }
+function playNotificationSound() { document.getElementById('notificationSound')?.play().catch(e => console.log); }
+function logout() { localStorage.clear(); location.reload(); }
+
+// ========== ВОССТАНОВЛЕНИЕ СЕССИИ ==========
+const savedToken = localStorage.getItem('chat_token');
+const savedUser = localStorage.getItem('chat_username');
+if (savedToken && savedUser) {
+    currentUser = savedUser;
+    document.getElementById('authContainer').style.display = 'none';
+    document.getElementById('roomsContainer').style.display = 'block';
+    document.getElementById('userNameDisplay').innerHTML = currentUser;
+    loadRooms();
+    loadUserProfile();
+    
+    const savedRoom = localStorage.getItem('current_room');
+    if (savedRoom) {
+        setTimeout(() => promptJoinRoom(savedRoom), 500);
     }
 }
 
-// Переопределяем обработку вставки и выбора файла
-document.getElementById('chatInput')?.addEventListener('paste', function(e) {
-    const items = e.clipboardData.items;
-    for (const item of items) {
-        if (item.type.indexOf('image') !== -1) {
-            e.preventDefault();
-            const file = item.getAsFile();
-            showImagePreview(file);
-            break;
-        }
-    }
-});
-
-document.getElementById('fileInput')?.addEventListener('change', function(e) {
-    const files = e.target.files;
-    if (files.length > 0) {
-        showImagePreview(files[0]);
-    }
-    this.value = '';
-});
-
-console.log('Script loaded successfully');
+const joinRoomFromInvite = localStorage.getItem('join_room');
+if (joinRoomFromInvite && !currentRoom) {
+    localStorage.removeItem('join_room');
+    setTimeout(() => promptJoinRoom(joinRoomFromInvite), 500);
+}
