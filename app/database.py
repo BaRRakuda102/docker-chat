@@ -44,6 +44,32 @@ class User(Base):
         self.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
         return self.verification_code
 
+class Room(Base):
+    __tablename__ = 'rooms'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, nullable=False, index=True)
+    room_uuid = Column(String(20), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    creator = Column(String(50), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomMessage(Base):
+    __tablename__ = 'room_messages'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    room_name = Column(String(100), nullable=False, index=True)
+    message_data = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomUser(Base):
+    __tablename__ = 'room_users'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    room_name = Column(String(100), nullable=False, index=True)
+    username = Column(String(50), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
 class PrivateChat(Base):
     __tablename__ = 'private_chats'
     
@@ -53,6 +79,15 @@ class PrivateChat(Base):
     last_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class PrivateMessage(Base):
+    __tablename__ = 'private_messages'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(Integer, nullable=False)
+    sender = Column(String(50), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 # Создаём таблицы
 Base.metadata.create_all(bind=engine)

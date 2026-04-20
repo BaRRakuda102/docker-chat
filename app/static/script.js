@@ -1,154 +1,326 @@
+// ========== ПЕРЕМЕННЫЕ ==========
 let ws = null;
 let currentUser = '';
 let currentRoom = '';
-let currentUserId = '';
-let rooms = [];
-let replyToMessage = null;
-let editingMessage = null;
+let roomsList = [];
+let pendingUserId = null;
+let currentRoomId = null;
+let isRoomCreator = false;
 
-// Определение часового пояса пользователя
-function getUserTimezone() {
-    const offset = new Date().getTimezoneOffset();
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return { offset, timezone };
+// ========== ПЕРЕКЛЮЧЕНИЕ ФОРМ ==========
+function showRegisterForm() {
+    document.getElementById('loginFormContainer').style.display = 'none';
+    document.getElementById('registerFormContainer').style.display = 'block';
+    document.getElementById('verifyFormContainer').style.display = 'none';
 }
 
-// Конвертация времени сервера в локальное время пользователя
-function convertToLocalTime(serverTimeStr) {
-    if (!serverTimeStr) return '--:--';
-    
-    const [hours, minutes] = serverTimeStr.split(':').map(Number);
-    
-    const now = new Date();
-    const serverDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, minutes));
-    
-    const localDate = new Date(serverDate.getTime());
-    
-    const localHours = localDate.getHours().toString().padStart(2, '0');
-    const localMinutes = localDate.getMinutes().toString().padStart(2, '0');
-    
-    return `${localHours}:${localMinutes}`;
+function showLoginForm() {
+    document.getElementById('loginFormContainer').style.display = 'block';
+    document.getElementById('registerFormContainer').style.display = 'none';
+    document.getElementById('verifyFormContainer').style.display = 'none';
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    currentUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    console.log('Инициализация, user ID:', currentUserId);
+// ========== РЕГИСТРАЦИЯ ==========
+async function doRegister() {
+    const username = document.getElementById('regUsername').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirm = document.getElementById('regPasswordConfirm').value;
+    const msgDiv = document.getElementById('registerMessage');
     
-    const messageInput = document.getElementById('messageInput');
-    if (messageInput) {
-        messageInput.addEventListener('paste', handlePaste);
+    if (!username || !email || !password) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Заполните все поля</span>';
+        return;
+    }
+    if (password !== confirm) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароли не совпадают</span>';
+        return;
+    }
+    if (password.length < 6) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароль должен быть не менее 6 символов</span>';
+        return;
     }
     
-    const imageInput = document.getElementById('imageInput');
-    if (imageInput) {
-        imageInput.addEventListener('change', uploadImage);
-    }
+    msgDiv.innerHTML = '<span style="color:#4aac4a;">Регистрация...</span>';
     
-    document.addEventListener('click', (e) => {
-        const picker = document.getElementById('messageEmojiPicker');
-        const btn = document.getElementById('emojiPickerBtn');
-        if (picker && btn && !btn.contains(e.target) && !picker.contains(e.target)) {
-            picker.style.display = 'none';
+    try {
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            localStorage.setItem('chat_token', data.token);
+            localStorage.setItem('chat_username', data.username);
+            currentUser = data.username;
+            
+            msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Регистрация успешна!</span>';
+            
+            setTimeout(() => {
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('roomsContainer').style.display = 'block';
+                document.getElementById('userNameDisplay').innerHTML = currentUser;
+                loadRooms();
+                loadUserProfile();
+            }, 1000);
+        } else {
+            msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
         }
-    });
+    } catch(e) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+    }
+}
+
+// ========== ВХОД ==========
+async function doLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const msgDiv = document.getElementById('loginMessage');
     
-    await restoreSession();
+    if (!username || !password) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите имя и пароль</span>';
+        return;
+    }
+    
+    msgDiv.innerHTML = '<span style="color:#4aac4a;">Вход...</span>';
+    
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            currentUser = data.username;
+            localStorage.setItem('chat_token', data.token);
+            localStorage.setItem('chat_username', currentUser);
+            
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('roomsContainer').style.display = 'block';
+            document.getElementById('userNameDisplay').innerHTML = currentUser;
+            loadRooms();
+            loadUserProfile();
+        } else {
+            msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
+        }
+    } catch(e) {
+        msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
+    }
+}
+
+// ========== ПРОФИЛЬ ==========
+function toggleProfileMenu() {
+    const dropdown = document.getElementById('profileDropdown');
+    dropdown.classList.toggle('show');
+}
+
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('profileDropdown');
+    const userInfo = document.querySelector('.user-info');
+    if (dropdown && userInfo && !userInfo.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove('show');
+    }
 });
 
-async function restoreSession() {
-    const savedUser = localStorage.getItem('chat_user');
-    const savedRoom = localStorage.getItem('chat_room');
-    
-    if (savedUser && savedRoom) {
-        currentUser = savedUser;
-        currentRoom = savedRoom;
-        
-        try {
-            const response = await fetch('/api/rooms');
-            const data = await response.json();
-            
-            if (data.success) {
-                const roomExists = data.rooms.some(r => r.name === savedRoom);
-                if (roomExists) {
-                    document.getElementById('authScreen').style.display = 'none';
-                    document.getElementById('roomsScreen').style.display = 'none';
-                    document.getElementById('chatApp').style.display = 'flex';
-                    document.getElementById('currentUser').textContent = currentUser;
-                    const currentRoomNameSpan = document.getElementById('currentRoomName');
-                    if (currentRoomNameSpan) currentRoomNameSpan.textContent = currentRoom;
-                    document.getElementById('currentRoom').textContent = currentRoom;
-                    connectWebSocket();
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error('Ошибка восстановления:', error);
-        }
+function calculateAge(birthDate) {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
     }
-    
-    document.getElementById('authScreen').style.display = 'flex';
-    document.getElementById('roomsScreen').style.display = 'none';
-    document.getElementById('chatApp').style.display = 'none';
+    return age;
 }
 
+function formatBirthDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('ru-RU');
+}
+
+async function loadUserProfile() {
+    try {
+        const res = await fetch(`/api/user/profile?username=${encodeURIComponent(currentUser)}`);
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('profileUsername').innerHTML = data.username;
+            document.getElementById('profileEmail').innerHTML = data.email;
+            document.getElementById('displayName').innerHTML = data.display_name || data.username;
+            const birthDate = data.birth_date;
+            if (birthDate) {
+                const age = calculateAge(birthDate);
+                document.getElementById('userAge').innerHTML = `${age} лет (${formatBirthDate(birthDate)})`;
+            } else {
+                document.getElementById('userAge').innerHTML = 'Не указан';
+            }
+            document.getElementById('regDate').innerHTML = new Date(data.created_at).toLocaleDateString();
+            
+            if (data.avatar_url) {
+                updateAvatarDisplay(data.avatar_url);
+            }
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки профиля:', e);
+    }
+}
+
+function showEditProfileModal() {
+    document.getElementById('editProfileModal').style.display = 'flex';
+    document.getElementById('editDisplayName').value = document.getElementById('displayName').innerHTML;
+    document.getElementById('editBirthDate').value = '';
+}
+
+function closeEditProfileModal() {
+    document.getElementById('editProfileModal').style.display = 'none';
+}
+
+async function saveProfile() {
+    const displayName = document.getElementById('editDisplayName').value.trim();
+    const birthDate = document.getElementById('editBirthDate').value;
+    
+    try {
+        const res = await fetch('/api/user/update_profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser, display_name: displayName, birth_date: birthDate })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Профиль обновлён!');
+            closeEditProfileModal();
+            loadUserProfile();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    }
+}
+
+// ========== АВАТАР ==========
+
+async function uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    formData.append('username', currentUser);
+    
+    try {
+        const res = await fetch('/api/user/upload_avatar', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            updateAvatarDisplay(data.avatar_url);
+            alert('Аватар обновлён!');
+            loadUserProfile();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки аватара:', e);
+        alert('Ошибка загрузки аватара');
+    }
+}
+
+function updateAvatarDisplay(avatarUrl) {
+    const smallAvatar = document.getElementById('userAvatarSmall');
+    const largeAvatar = document.getElementById('userAvatarLarge');
+    const chatAvatar = document.getElementById('chatUserAvatar');
+    const editPreview = document.getElementById('editAvatarPreview');
+    
+    if (smallAvatar) smallAvatar.src = avatarUrl + '?t=' + Date.now();
+    if (largeAvatar) largeAvatar.src = avatarUrl + '?t=' + Date.now();
+    if (chatAvatar) chatAvatar.src = avatarUrl + '?t=' + Date.now();
+    if (editPreview) editPreview.src = avatarUrl + '?t=' + Date.now();
+}
+
+document.getElementById('avatarInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Файл слишком большой. Максимальный размер 5MB');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('Пожалуйста, выберите изображение');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const editPreview = document.getElementById('editAvatarPreview');
+            if (editPreview) {
+                editPreview.src = event.target.result;
+            }
+        };
+        reader.readAsDataURL(file);
+        uploadAvatar(file);
+    }
+});
+
+// ========== КОМНАТЫ ==========
 async function loadRooms() {
     try {
-        const response = await fetch('/api/rooms');
-        const data = await response.json();
-        rooms = data.success ? (data.rooms || []) : [];
-        renderRooms();
-    } catch (error) {
-        console.error('Ошибка загрузки комнат:', error);
-        rooms = [];
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        if (data.success) {
+            roomsList = data.rooms;
+            renderRooms();
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки комнат:', e);
+        roomsList = [];
         renderRooms();
     }
 }
 
 function renderRooms() {
     const container = document.getElementById('roomsList');
-    if (container) {
-        if (rooms.length === 0) {
-            container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;">Нет комнат. Создайте первую!</div>';
-        } else {
-            container.innerHTML = rooms.map(room => `
-                <div class="room-card" onclick="promptJoinRoom('${room.name}')">
-                    <i class="fas fa-lock"></i>
+    if (!container) return;
+    
+    if (roomsList.length === 0) {
+        container.innerHTML = '<div class="empty-rooms"><i class="fas fa-comment-slash"></i><p>Нет комнат</p><small>Создайте первую комнату</small></div>';
+    } else {
+        container.innerHTML = roomsList.map(room => `
+            <div class="room-card" onclick="promptJoinRoom('${room.name}')">
+                <div class="room-icon"><i class="fas fa-lock"></i></div>
+                <div class="room-details">
                     <h4>${escapeHtml(room.name)}</h4>
                     <p>Создал: ${escapeHtml(room.creator)}</p>
+                    <div class="room-stats"><span><i class="fas fa-users"></i> 0</span></div>
                 </div>
-            `).join('');
-        }
+            </div>
+        `).join('');
     }
 }
 
-function showRooms() {
-    const username = document.getElementById('username').value.trim();
-    if (!username) {
-        alert('Введите ваше имя');
-        return;
-    }
-    currentUser = username;
-    console.log('Имя пользователя:', currentUser);
-    
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('roomsScreen').style.display = 'flex';
-    loadRooms();
+function filterRooms() {
+    const searchTerm = document.getElementById('searchRoomsInput').value.toLowerCase();
+    const roomCards = document.querySelectorAll('.room-card');
+    roomCards.forEach(card => {
+        const roomName = card.querySelector('h4').innerText.toLowerCase();
+        card.style.display = roomName.includes(searchTerm) ? 'flex' : 'none';
+    });
 }
 
-function showCreateRoom() {
+function showCreateRoomModal() {
     document.getElementById('createRoomModal').style.display = 'flex';
     document.getElementById('newRoomName').value = '';
     document.getElementById('newRoomPassword').value = '';
 }
 
-function closeModal() {
+function closeCreateRoomModal() {
     document.getElementById('createRoomModal').style.display = 'none';
-    document.getElementById('joinRoomModal').style.display = 'none';
-    document.getElementById('roomSettingsModal').style.display = 'none';
-    document.getElementById('confirmDeleteModal').style.display = 'none';
 }
 
-async function createRoom() {
+async function createNewRoom() {
     const name = document.getElementById('newRoomName').value.trim();
     const password = document.getElementById('newRoomPassword').value;
     
@@ -162,31 +334,22 @@ async function createRoom() {
         return;
     }
     
-    if (password.length < 4) {
-        alert('Пароль должен быть не менее 4 символов');
-        return;
-    }
-    
     try {
-        const response = await fetch('/api/create_room', {
+        const res = await fetch('/api/create_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, password: password, creator: currentUser })
+            body: JSON.stringify({ name, password, creator: currentUser })
         });
-        
-        const data = await response.json();
-        
+        const data = await res.json();
         if (data.success) {
-            alert(`Комната "${name}" успешно создана!`);
-            closeModal();
-            await loadRooms();
-            await switchRoom(data.room);
+            alert('Комната создана!');
+            closeCreateRoomModal();
+            loadRooms();
         } else {
-            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            alert('Ошибка: ' + data.error);
         }
-    } catch (error) {
-        console.error('Ошибка при создании комнаты:', error);
-        alert('Ошибка соединения с сервером.');
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
     }
 }
 
@@ -194,607 +357,94 @@ let pendingRoom = '';
 
 function promptJoinRoom(roomName) {
     pendingRoom = roomName;
-    document.getElementById('joinRoomName').innerHTML = `<i class="fas fa-hashtag"></i> ${roomName}`;
+    document.getElementById('joinRoomNameText').innerHTML = 'Комната: ' + roomName;
     document.getElementById('joinRoomModal').style.display = 'flex';
     document.getElementById('roomPassword').value = '';
 }
 
-async function joinRoom() {
+function closeJoinRoomModal() {
+    document.getElementById('joinRoomModal').style.display = 'none';
+}
+
+async function joinSelectedRoom() {
     const password = document.getElementById('roomPassword').value;
-    
     if (!password) {
         alert('Введите пароль');
         return;
     }
     
     try {
-        const response = await fetch('/api/join_room', {
+        const res = await fetch('/api/join_room', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ room: pendingRoom, password: password })
         });
-        
+        const data = await res.json();
+        if (data.success) {
+            closeJoinRoomModal();
+            currentRoom = pendingRoom;
+            document.getElementById('roomsContainer').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
+            document.getElementById('chatRoomTitle').innerHTML = currentRoom;
+            document.getElementById('chatCurrentUser').innerHTML = currentUser;
+            document.getElementById('chatMessages').innerHTML = '';
+            await updateRoomInfo();
+            connectWebSocket();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    }
+}
+
+function leaveToRooms() {
+    if (ws) ws.close();
+    document.getElementById('chatContainer').style.display = 'none';
+    document.getElementById('roomsContainer').style.display = 'block';
+    loadRooms();
+}
+
+// ========== ПРИГЛАШЕНИЯ ==========
+
+async function updateRoomInfo() {
+    try {
+        const response = await fetch(`/api/rooms/${currentRoom}/info`);
         const data = await response.json();
         
         if (data.success) {
-            closeModal();
-            await switchRoom(pendingRoom);
-        } else {
-            alert('Ошибка: ' + (data.error || 'Неверный пароль'));
+            currentRoomId = data.room.id;
+            isRoomCreator = (data.room.creator === currentUser);
+            
+            const settingsBtn = document.getElementById('roomSettingsBtn');
+            if (settingsBtn) {
+                settingsBtn.style.display = isRoomCreator ? 'flex' : 'none';
+            }
         }
     } catch (error) {
-        console.error('Ошибка при входе в комнату:', error);
-        alert('Ошибка соединения с сервером');
+        console.error('Ошибка обновления информации:', error);
     }
 }
 
-async function switchRoom(roomName) {
-    if (ws) {
-        ws.close();
-        ws = null;
-    }
-    
-    currentRoom = roomName;
-    replyToMessage = null;
-    editingMessage = null;
-    
-    localStorage.setItem('chat_user', currentUser);
-    localStorage.setItem('chat_room', currentRoom);
-    
-    document.getElementById('roomsScreen').style.display = 'none';
-    document.getElementById('chatApp').style.display = 'flex';
-    document.getElementById('currentUser').textContent = currentUser;
-    document.getElementById('currentRoom').textContent = roomName;
-    
-    const currentRoomNameSpan = document.getElementById('currentRoomName');
-    if (currentRoomNameSpan) {
-        currentRoomNameSpan.textContent = roomName;
-    }
-    
-    document.getElementById('messages').innerHTML = '';
-    
-    await updateRoomInfo();
-    connectWebSocket();
+function showInviteModal() {
+    const inviteLink = `${window.location.origin}/join/${currentRoomId}`;
+    document.getElementById('inviteLinkInput').value = inviteLink;
+    document.getElementById('inviteModal').style.display = 'flex';
 }
 
-function leaveRoom() {
-    if (confirm('Выйти из комнаты?')) {
-        if (ws) {
-            ws.close();
-            ws = null;
-        }
-        
-        document.getElementById('chatApp').style.display = 'none';
-        document.getElementById('roomsScreen').style.display = 'flex';
-        loadRooms();
-    }
+function closeInviteModal() {
+    document.getElementById('inviteModal').style.display = 'none';
 }
 
-function connectWebSocket() {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/${currentUserId}`;
-    
-    ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-        console.log('WebSocket подключен');
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.disabled = false;
-            messageInput.placeholder = 'Введите сообщение...';
-            messageInput.focus();
-        }
-    };
-    
-    ws.onmessage = async (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'room_deleted') {
-                alert(data.message);
-                document.getElementById('chatApp').style.display = 'none';
-                document.getElementById('roomsScreen').style.display = 'flex';
-                loadRooms();
-                return;
-            }
-            
-            // Конвертируем время в локальное для сообщений
-            if (data.type === 'message' || data.type === 'image') {
-                data.timestamp = convertToLocalTime(data.timestamp);
-            }
-            
-            handleMessage(data);
-            
-            if (data.type === 'message' && data.username !== currentUser) {
-                playNotificationSound();
-            }
-        } catch (e) {
-            console.error('Ошибка парсинга сообщения:', e);
-        }
-    };
-    
-    ws.onerror = (error) => {
-        console.error('WebSocket ошибка:', error);
-    };
-    
-    ws.onclose = () => {
-        console.log('WebSocket отключен');
-    };
+function copyInviteLink() {
+    const input = document.getElementById('inviteLinkInput');
+    input.select();
+    document.execCommand('copy');
+    alert('Ссылка скопирована!');
 }
 
-function handleMessage(data) {
-    const messagesDiv = document.getElementById('messages');
-    if (!messagesDiv) return;
-    
-    if (data.type === 'message') {
-        const isOwn = (data.username === currentUser);
-        
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${isOwn ? 'own' : 'other'}`;
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message';
-        msgDiv.id = `msg-${data.id}`;
-        
-        let replyHtml = '';
-        if (data.reply_to) {
-            replyHtml = `
-                <div class="reply-preview">
-                    <i class="fas fa-reply"></i>
-                    <span>${escapeHtml(data.reply_to.username)}: ${escapeHtml(data.reply_to.message.substring(0, 40))}</span>
-                </div>
-            `;
-        }
-        
-        let reactionsHtml = '';
-        if (data.reactions) {
-            reactionsHtml = renderReactions(data.id, data.reactions);
-        }
-        
-        msgDiv.innerHTML = `
-            <div class="message-header">
-                <span class="username" style="color: ${getUserColor(data.username)}">${escapeHtml(data.username)}</span>
-                <span class="timestamp">${data.timestamp}</span>
-            </div>
-            ${replyHtml}
-            <div class="message-text">${parseMessageWithMentions(data.message)}</div>
-            <div class="message-reactions" id="reactions-${data.id}">${reactionsHtml}</div>
-            <div class="message-actions">
-                <button onmouseenter="showEmojiPicker('${data.id}')" class="action-btn">
-                    <i class="fas fa-smile-wink"></i>
-                </button>
-                <button onclick="replyToMessageById('${data.id}', '${escapeHtml(data.username)}', '${escapeHtml(data.message)}')" class="action-btn">
-                    <i class="fas fa-reply"></i>
-                </button>
-                ${isOwn ? `
-                    <button onclick="editMessage('${data.id}', '${escapeHtml(data.message)}')" class="action-btn">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                ` : ''}
-            </div>
-        `;
-        
-        wrapper.appendChild(msgDiv);
-        messagesDiv.appendChild(wrapper);
-        
-    } else if (data.type === 'image') {
-        const isOwn = (data.username === currentUser);
-        
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${isOwn ? 'own' : 'other'}`;
-        
-        const imgDiv = document.createElement('div');
-        imgDiv.className = 'message';
-        imgDiv.id = `msg-${data.id}`;
-        
-        let replyHtml = '';
-        if (data.reply_to) {
-            replyHtml = `
-                <div class="reply-preview">
-                    <i class="fas fa-reply"></i>
-                    <span>${escapeHtml(data.reply_to.username)}: ${escapeHtml(data.reply_to.message.substring(0, 40))}</span>
-                </div>
-            `;
-        }
-        
-        imgDiv.innerHTML = `
-            <div class="message-header">
-                <span class="username" style="color: ${getUserColor(data.username)}">${escapeHtml(data.username)}</span>
-                <span class="timestamp">${data.timestamp}</span>
-            </div>
-            ${replyHtml}
-            <div class="image-message">
-                <img src="${data.url}" alt="image" class="clickable-image" onclick="openImageModal('${data.url}')">
-                ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
-            </div>
-            <div class="message-actions">
-                <button onclick="replyToMessageById('${data.id}', '${escapeHtml(data.username)}', '[Изображение]')" class="action-btn">
-                    <i class="fas fa-reply"></i>
-                </button>
-            </div>
-        `;
-        
-        wrapper.appendChild(imgDiv);
-        messagesDiv.appendChild(wrapper);
-        
-    } else if (data.type === 'system') {
-        const sysDiv = document.createElement('div');
-        sysDiv.className = 'system-message';
-        sysDiv.textContent = data.message;
-        messagesDiv.appendChild(sysDiv);
-        
-    } else if (data.type === 'users') {
-        document.getElementById('userCount').textContent = data.count;
-        document.getElementById('userCountHeader').textContent = data.count;
-        updateUsersList(data.users);
-        
-    } else if (data.type === 'reaction_update') {
-        const reactionsDiv = document.getElementById(`reactions-${data.id}`);
-        if (reactionsDiv) {
-            reactionsDiv.innerHTML = renderReactions(data.id, data.reactions);
-        }
-    }
-    
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-function renderReactions(messageId, reactions) {
-    if (!reactions || Object.keys(reactions).length === 0) return '';
-    
-    let html = '<div class="reactions-container">';
-    for (const [reaction, users] of Object.entries(reactions)) {
-        html += `
-            <button class="reaction-btn" onclick="addReaction('${messageId}', '${reaction}')">
-                ${reaction} ${users.length}
-            </button>
-        `;
-    }
-    html += '</div>';
-    return html;
-}
-
-function addReaction(messageId, reaction) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    
-    ws.send(JSON.stringify({
-        type: 'reaction',
-        message_id: messageId,
-        reaction: reaction
-    }));
-}
-
-let currentEmojiPicker = null;
-let hideTimeout = null;
-
-function showEmojiPicker(messageId) {
-    if (currentEmojiPicker) {
-        currentEmojiPicker.classList.remove('show');
-        if (hideTimeout) clearTimeout(hideTimeout);
-    }
-    
-    let picker = document.getElementById(`emoji-picker-${messageId}`);
-    if (!picker) {
-        picker = document.createElement('div');
-        picker.id = `emoji-picker-${messageId}`;
-        picker.className = 'emoji-picker-popup';
-        
-        const emojis = ['😀', '😂', '❤️', '👍', '🎉', '😢', '😡', '😎', '🥰', '🤣', '😍', '😱', '😭', '🤔', '🙏', '👏'];
-        
-        picker.innerHTML = emojis.map(emoji => `
-            <button class="emoji-option" onclick="addReaction('${messageId}', '${emoji}'); hideEmojiPicker('${messageId}');">
-                ${emoji}
-            </button>
-        `).join('');
-        
-        const msgDiv = document.getElementById(`msg-${messageId}`);
-        if (msgDiv) {
-            const actionsDiv = msgDiv.querySelector('.message-actions');
-            actionsDiv.appendChild(picker);
-        }
-    }
-    
-    currentEmojiPicker = picker;
-    picker.classList.add('show');
-    
-    picker.onmouseleave = () => {
-        hideTimeout = setTimeout(() => {
-            hideEmojiPicker(messageId);
-        }, 300);
-    };
-    
-    picker.onmouseenter = () => {
-        if (hideTimeout) clearTimeout(hideTimeout);
-    };
-}
-
-function hideEmojiPicker(messageId) {
-    const picker = document.getElementById(`emoji-picker-${messageId}`);
-    if (picker) {
-        picker.classList.remove('show');
-        currentEmojiPicker = null;
-    }
-}
-
-function parseMessageWithMentions(text) {
-    return text.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
-}
-
-function updateUsersList(users) {
-    const usersList = document.getElementById('usersList');
-    if (!usersList) return;
-    
-    usersList.innerHTML = users.map(user => `
-        <div class="user-item" onclick="insertMention('${user}')">
-            <i class="fas fa-user-circle"></i>
-            <span>${escapeHtml(user)}</span>
-            ${user === currentUser ? ' (Вы)' : ''}
-        </div>
-    `).join('');
-}
-
-function insertMention(username) {
-    const input = document.getElementById('messageInput');
-    input.value += `@${username} `;
-    input.focus();
-}
-
-function replyToMessageById(messageId, username, messageText) {
-    replyToMessage = { id: messageId, username: username, message: messageText };
-    
-    let replyIndicator = document.getElementById('replyIndicator');
-    if (!replyIndicator) {
-        replyIndicator = document.createElement('div');
-        replyIndicator.id = 'replyIndicator';
-        replyIndicator.className = 'reply-indicator';
-        const inputContainer = document.querySelector('.input-container');
-        inputContainer.insertBefore(replyIndicator, inputContainer.firstChild);
-    }
-    
-    replyIndicator.innerHTML = `
-        <div class="reply-content">
-            <i class="fas fa-reply"></i>
-            <span>Ответ для <strong>${escapeHtml(username)}</strong>: ${escapeHtml(messageText.substring(0, 50))}</span>
-            <button onclick="cancelReply()" class="cancel-reply-btn">✕</button>
-        </div>
-    `;
-    replyIndicator.style.display = 'block';
-    
-    document.getElementById('messageInput').focus();
-}
-
-function cancelReply() {
-    replyToMessage = null;
-    const replyIndicator = document.getElementById('replyIndicator');
-    if (replyIndicator) {
-        replyIndicator.style.display = 'none';
-    }
-}
-
-function editMessage(messageId, currentText) {
-    editingMessage = { id: messageId, text: currentText };
-    
-    const messageInput = document.getElementById('messageInput');
-    messageInput.value = currentText;
-    messageInput.focus();
-    
-    let editIndicator = document.getElementById('editIndicator');
-    if (!editIndicator) {
-        editIndicator = document.createElement('div');
-        editIndicator.id = 'editIndicator';
-        editIndicator.className = 'edit-indicator-bar';
-        const inputContainer = document.querySelector('.input-container');
-        inputContainer.insertBefore(editIndicator, inputContainer.firstChild);
-    }
-    
-    editIndicator.innerHTML = `
-        <div class="edit-content">
-            <i class="fas fa-edit"></i>
-            <span>Редактирование сообщения...</span>
-            <button onclick="cancelEdit()" class="cancel-edit-btn">✕</button>
-        </div>
-    `;
-    editIndicator.style.display = 'block';
-}
-
-function cancelEdit() {
-    editingMessage = null;
-    const editIndicator = document.getElementById('editIndicator');
-    if (editIndicator) {
-        editIndicator.style.display = 'none';
-    }
-    document.getElementById('messageInput').value = '';
-}
-
-function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
-    
-    if (!message && !editingMessage) {
-        return;
-    }
-    
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        alert('Нет соединения с чатом.');
-        return;
-    }
-    
-    if (editingMessage) {
-        ws.send(JSON.stringify({
-            type: 'edit_message',
-            message_id: editingMessage.id,
-            new_text: message
-        }));
-        cancelEdit();
-    } else {
-        const messageData = { type: 'message', message: message };
-        if (replyToMessage) {
-            messageData.reply_to = replyToMessage;
-        }
-        ws.send(JSON.stringify(messageData));
-        cancelReply();
-    }
-    
-    input.value = '';
-    input.focus();
-}
-
-function toggleMessageEmojiPicker() {
-    const picker = document.getElementById('messageEmojiPicker');
-    if (picker) {
-        picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
-    }
-}
-
-function insertEmoji(emoji) {
-    const input = document.getElementById('messageInput');
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const text = input.value;
-    
-    input.value = text.substring(0, start) + emoji + text.substring(end);
-    input.selectionStart = input.selectionEnd = start + emoji.length;
-    input.focus();
-    
-    const picker = document.getElementById('messageEmojiPicker');
-    if (picker) picker.style.display = 'none';
-}
-
-async function uploadFile(file) {
-    if (!file) return;
-    
-    if (!file.type.startsWith('image/')) {
-        alert('Пожалуйста, загружайте только изображения');
-        return;
-    }
-    
-    showUploadPreview('Загрузка изображения...');
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fetch('/upload', { method: 'POST', body: formData });
-        const data = await response.json();
-        
-        if (data.error) {
-            alert('Ошибка: ' + data.error);
-            hideUploadPreview();
-            return;
-        }
-        
-        const caption = prompt('Подпись к изображению (необязательно):');
-        
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            const imageData = { type: 'image', url: data.url, caption: caption || '' };
-            if (replyToMessage) {
-                imageData.reply_to = replyToMessage;
-                cancelReply();
-            }
-            ws.send(JSON.stringify(imageData));
-        }
-        
-        hideUploadPreview();
-    } catch (error) {
-        console.error('Ошибка загрузки изображения:', error);
-        alert('Ошибка загрузки изображения');
-        hideUploadPreview();
-    }
-}
-
-async function handlePaste(event) {
-    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
-    for (const item of items) {
-        if (item.type.indexOf('image') !== -1) {
-            event.preventDefault();
-            const file = item.getAsFile();
-            await uploadFile(file);
-            break;
-        }
-    }
-}
-
-async function uploadImage() {
-    const input = document.getElementById('imageInput');
-    const file = input.files[0];
-    if (!file) return;
-    await uploadFile(file);
-    input.value = '';
-}
-
-function openImageModal(imageUrl) {
-    let modal = document.getElementById('imageModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'imageModal';
-        modal.className = 'image-modal';
-        modal.innerHTML = `
-            <div class="image-modal-content">
-                <span class="image-modal-close">&times;</span>
-                <img class="image-modal-img" id="modalImage" src="">
-            </div>
-        `;
-        document.body.appendChild(modal);
-        
-        modal.querySelector('.image-modal-close').onclick = () => modal.style.display = 'none';
-        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display === 'flex') modal.style.display = 'none'; });
-    }
-    
-    const modalImg = modal.querySelector('#modalImage');
-    modalImg.src = imageUrl;
-    modal.style.display = 'flex';
-}
-
-function showUploadPreview(message) {
-    let preview = document.getElementById('uploadPreview');
-    if (!preview) {
-        preview = document.createElement('div');
-        preview.id = 'uploadPreview';
-        preview.className = 'upload-preview';
-        document.body.appendChild(preview);
-    }
-    preview.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${message}`;
-    preview.style.display = 'block';
-}
-
-function hideUploadPreview() {
-    const preview = document.getElementById('uploadPreview');
-    if (preview) preview.style.display = 'none';
-}
-
-function handleKeyPress(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-    }
-}
-
-function logout() {
-    localStorage.removeItem('chat_user');
-    localStorage.removeItem('chat_room');
-    if (ws) ws.close();
-    location.reload();
-}
-
-function playNotificationSound() {
-    const audio = document.getElementById('notificationSound');
-    if (audio) audio.play().catch(e => console.log('Звук не воспроизведён'));
-}
-
-function getUserColor(username) {
-    const colors = [
-        '#ff6b6b', '#ff8c42', '#ffd93d', '#6bcf7f', '#4d9de0',
-        '#ff6ec7', '#9b59b6', '#3498db', '#e74c3c', '#f39c12',
-        '#1abc9c', '#2ecc71', '#e67e22', '#e84393', '#00cec9',
-        '#3a8c3a', '#4aac4a', '#5acc5a', '#2a6c2a', '#6adc6a'
-    ];
-    let hash = 0;
-    for (let i = 0; i < username.length; i++) {
-        hash = ((hash << 5) - hash) + username.charCodeAt(i);
-        hash = hash & hash;
-    }
-    return colors[Math.abs(hash) % colors.length];
-}
+// ========== УПРАВЛЕНИЕ КОМНАТОЙ ==========
 
 async function showRoomSettings() {
     try {
@@ -805,10 +455,16 @@ async function showRoomSettings() {
             document.getElementById('settingsRoomName').textContent = data.room.name;
             document.getElementById('settingsRoomCreator').textContent = data.room.creator;
             document.getElementById('settingsMemberCount').textContent = data.room.member_count;
-            document.getElementById('settingsCreatedAt').textContent = new Date(data.room.created_at).toLocaleString();
+            document.getElementById('settingsRoomId').textContent = data.room.id;
+            
+            await loadRoomMembers();
+            
+            const deleteSection = document.getElementById('deleteRoomSection');
+            if (deleteSection) {
+                deleteSection.style.display = isRoomCreator ? 'block' : 'none';
+            }
+            
             document.getElementById('roomSettingsModal').style.display = 'flex';
-        } else {
-            alert('Ошибка: ' + data.error);
         }
     } catch (error) {
         console.error('Ошибка получения информации о комнате:', error);
@@ -818,6 +474,98 @@ async function showRoomSettings() {
 
 function closeRoomSettings() {
     document.getElementById('roomSettingsModal').style.display = 'none';
+}
+
+async function loadRoomMembers() {
+    try {
+        const response = await fetch(`/api/rooms/${currentRoom}/members`);
+        const data = await response.json();
+        
+        if (data.success && data.members) {
+            const membersList = document.getElementById('roomMembersList');
+            membersList.innerHTML = data.members.map(member => `
+                <div class="member-item">
+                    <span class="member-name">${escapeHtml(member)} ${member === currentUser ? '(Вы)' : ''}</span>
+                    ${member !== currentUser && isRoomCreator ? `
+                        <button onclick="kickUser('${member}')" class="kick-btn">Выгнать</button>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки участников:', error);
+    }
+}
+
+async function renameRoom() {
+    const newName = document.getElementById('editRoomName').value.trim();
+    
+    if (!newName) {
+        alert('Введите новое название комнаты');
+        return;
+    }
+    
+    if (newName.length < 3) {
+        alert('Название должно быть не менее 3 символов');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/rooms/rename', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                old_name: currentRoom, 
+                new_name: newName, 
+                username: currentUser 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Название комнаты изменено!');
+            currentRoom = newName;
+            document.getElementById('chatRoomName').innerHTML = `# ${currentRoom}`;
+            document.getElementById('chatRoomTitle').innerHTML = currentRoom;
+            closeRoomSettings();
+            loadRooms();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка переименования:', error);
+        alert('Ошибка соединения с сервером');
+    }
+}
+
+async function kickUser(username) {
+    if (!confirm(`Выгнать пользователя ${username} из комнаты?`)) return;
+    
+    try {
+        const response = await fetch('/api/rooms/kick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                room_name: currentRoom, 
+                username: username, 
+                admin: currentUser 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`Пользователь ${username} выгнан из комнаты`);
+            await loadRoomMembers();
+            await updateRoomInfo();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка выгона:', error);
+        alert('Ошибка соединения с сервером');
+    }
 }
 
 function confirmDeleteRoom() {
@@ -834,7 +582,7 @@ async function deleteRoom() {
     closeConfirmDelete();
     
     try {
-        const response = await fetch(`/api/rooms/${currentRoom}?username=${encodeURIComponent(currentUser)}`, {
+        const response = await fetch(`/api/rooms/delete/${currentRoom}?username=${encodeURIComponent(currentUser)}`, {
             method: 'DELETE'
         });
         
@@ -843,9 +591,8 @@ async function deleteRoom() {
         if (data.success) {
             alert(`Комната "${currentRoom}" успешно удалена`);
             if (ws) ws.close();
-            localStorage.removeItem('chat_room');
-            document.getElementById('chatApp').style.display = 'none';
-            document.getElementById('roomsScreen').style.display = 'flex';
+            document.getElementById('chatContainer').style.display = 'none';
+            document.getElementById('roomsContainer').style.display = 'block';
             await loadRooms();
         } else {
             alert('Ошибка: ' + (data.error || 'Не удалось удалить комнату'));
@@ -856,36 +603,175 @@ async function deleteRoom() {
     }
 }
 
-async function updateRoomInfo() {
+// ========== ОТПРАВКА ФАЙЛОВ ==========
+
+async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
     try {
-        const response = await fetch(`/api/rooms/${currentRoom}/info`);
-        const data = await response.json();
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
         
-        if (data.success) {
-            const roomCreatorSpan = document.getElementById('roomCreator');
-            const settingsBtn = document.getElementById('roomSettingsBtn');
-            
-            if (roomCreatorSpan) {
-                roomCreatorSpan.textContent = `создатель: ${data.room.creator}`;
-            }
-            
-            if (settingsBtn && data.room.creator === currentUser) {
-                settingsBtn.style.display = 'block';
-            } else if (settingsBtn) {
-                settingsBtn.style.display = 'none';
+        if (data.url) {
+            if (file.type.startsWith('image/')) {
+                ws.send(JSON.stringify({
+                    type: 'image',
+                    url: data.url,
+                    caption: ''
+                }));
+            } else {
+                ws.send(JSON.stringify({
+                    type: 'file',
+                    url: data.url,
+                    filename: file.name,
+                    size: file.size
+                }));
             }
         }
-    } catch (error) {
-        console.error('Ошибка обновления информации:', error);
+    } catch(e) {
+        console.error('Ошибка загрузки файла:', e);
     }
 }
 
+// ========== ПРОСМОТР ИЗОБРАЖЕНИЙ ==========
+
+function openImageViewer(imageUrl) {
+    const modal = document.getElementById('imageViewerModal');
+    const img = document.getElementById('viewerImage');
+    img.src = imageUrl;
+    modal.style.display = 'flex';
+}
+
+function closeImageViewer() {
+    document.getElementById('imageViewerModal').style.display = 'none';
+}
+
+// ========== ЧАТ ==========
+function connectWebSocket() {
+    const wsUrl = `ws://${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+        console.log('WebSocket подключен');
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('chatInput').focus();
+    };
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const messagesDiv = document.getElementById('chatMessages');
+        
+        if (data.type === 'message') {
+            const isOwn = (data.username === currentUser);
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+            msgDiv.innerHTML = `
+                <div class="chat-message-header">
+                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
+                    <span>${data.timestamp}</span>
+                </div>
+                <div class="chat-message-text">${escapeHtml(data.message)}</div>
+            `;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            if (data.username !== currentUser) playNotificationSound();
+        } else if (data.type === 'image') {
+            const isOwn = (data.username === currentUser);
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+            msgDiv.innerHTML = `
+                <div class="chat-message-header">
+                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
+                    <span>${data.timestamp}</span>
+                </div>
+                <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
+                ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
+            `;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else if (data.type === 'system') {
+            const sysDiv = document.createElement('div');
+            sysDiv.className = 'system-message';
+            sysDiv.innerHTML = data.message;
+            messagesDiv.appendChild(sysDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else if (data.type === 'users') {
+            document.getElementById('chatUserCount').innerHTML = data.count;
+        } else if (data.type === 'kicked') {
+            alert(data.message);
+            leaveToRooms();
+        } else if (data.type === 'room_deleted') {
+            alert(data.message);
+            leaveToRooms();
+        }
+    };
+    
+    ws.onerror = (error) => console.error('WebSocket ошибка:', error);
+    ws.onclose = () => console.log('WebSocket отключен');
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'message', message }));
+    input.value = '';
+}
+
+document.getElementById('chatInput')?.addEventListener('paste', function(e) {
+    const items = e.clipboardData.items;
+    for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            const file = item.getAsFile();
+            uploadFile(file);
+            break;
+        }
+    }
+});
+
+document.getElementById('fileInput')?.addEventListener('change', function(e) {
+    const files = e.target.files;
+    for (const file of files) {
+        uploadFile(file);
+    }
+    this.value = '';
+});
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ==========
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-if (Notification.permission === 'default') Notification.requestPermission();
+function playNotificationSound() {
+    const audio = document.getElementById('notificationSound');
+    if (audio) audio.play().catch(e => console.log('Звук не воспроизведён'));
+}
 
-console.log('Скрипт загружен');
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
+
+// Проверка сохранённой сессии
+const savedToken = localStorage.getItem('chat_token');
+const savedUser = localStorage.getItem('chat_username');
+if (savedToken && savedUser) {
+    currentUser = savedUser;
+    document.getElementById('authContainer').style.display = 'none';
+    document.getElementById('roomsContainer').style.display = 'block';
+    document.getElementById('userNameDisplay').innerHTML = currentUser;
+    loadRooms();
+    loadUserProfile();
+}
+
+// Проверка приглашения
+const joinRoom = localStorage.getItem('join_room');
+if (joinRoom) {
+    localStorage.removeItem('join_room');
+    setTimeout(() => {
+        promptJoinRoom(joinRoom);
+    }, 500);
+}
