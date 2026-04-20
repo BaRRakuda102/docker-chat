@@ -5,15 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Присоединиться к чату | Dark Chat</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233a8c3a'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.35em' font-size='70' fill='white' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0a1a0a 0%, #000000 100%);
@@ -23,77 +16,27 @@
             align-items: center;
             padding: 20px;
         }
-        
         .join-container {
-            max-width: 480px;
+            max-width: 450px;
             width: 100%;
-            margin: 0 auto;
-            background: rgba(13, 31, 13, 0.85);
-            backdrop-filter: blur(20px);
+            background: rgba(13, 31, 13, 0.9);
             border-radius: 40px;
-            border: 1px solid rgba(74, 172, 74, 0.4);
+            border: 1px solid #4aac4a;
             padding: 40px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        
-        .join-container h2 {
-            color: white;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        
-        .join-container h3 {
-            color: white;
-            font-size: 22px;
-            margin-bottom: 25px;
-        }
-        
-        .join-container p {
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-        
-        .room-name {
-            color: #4aac4a;
-            font-size: 28px;
-            font-weight: bold;
-            margin: 15px 0;
-            word-break: break-all;
-        }
-        
-        .creator-info {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-        
-        .input-group {
-            margin-bottom: 20px;
-        }
-        
+        h2, h3, p { color: white; margin-bottom: 20px; }
+        .room-name { color: #4aac4a; font-size: 28px; font-weight: bold; margin: 15px 0; }
+        .input-group { margin-bottom: 20px; }
         .input-group input {
             width: 100%;
             padding: 14px 18px;
             background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(74, 172, 74, 0.4);
+            border: 1px solid #4aac4a;
             border-radius: 16px;
             color: white;
             font-size: 15px;
-            transition: all 0.3s;
         }
-        
-        .input-group input:focus {
-            outline: none;
-            border-color: #4aac4a;
-            background: rgba(0, 0, 0, 0.7);
-        }
-        
-        .input-group input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
         .btn {
             width: 100%;
             padding: 14px;
@@ -102,363 +45,141 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #3a8c3a, #4aac4a);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(74, 172, 74, 0.4);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(74, 172, 74, 0.4);
-            color: white;
-            margin-top: 15px;
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(74, 172, 74, 0.2);
-        }
-        
-        .switch-link {
-            color: #4aac4a;
-            cursor: pointer;
-            display: inline-block;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        
-        .switch-link:hover {
-            text-decoration: underline;
-        }
-        
-        .message {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 13px;
-        }
-        
-        .message.success {
-            background: rgba(74, 172, 74, 0.2);
-            color: #4aac4a;
-        }
-        
-        .message.error {
-            background: rgba(255, 68, 68, 0.2);
-            color: #ff8888;
-        }
-        
-        .message.info {
-            background: rgba(74, 172, 74, 0.1);
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .loading {
-            color: #4aac4a;
-            padding: 20px;
-        }
-        
-        .fa-spinner {
-            margin-right: 8px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .button-group .btn {
-            flex: 1;
-            margin-top: 0;
-        }
-        
-        @media (max-width: 500px) {
-            .join-container {
-                padding: 30px 20px;
-            }
-            .button-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
+        .btn-primary { background: linear-gradient(135deg, #3a8c3a, #4aac4a); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid #4aac4a; color: white; margin-top: 15px; }
+        .switch-link { color: #4aac4a; cursor: pointer; margin-top: 20px; display: inline-block; }
+        .message { margin-top: 20px; padding: 12px; border-radius: 12px; font-size: 13px; }
+        .error { color: #ff6b6b; }
+        .success { color: #4aac4a; }
+        .button-group { display: flex; gap: 15px; margin: 20px 0; }
+        .button-group .btn { margin: 0; }
     </style>
 </head>
 <body>
-    <div class="join-container" id="joinContainer">
-        <i class="fas fa-door-open" style="font-size: 64px; color: #4aac4a; margin-bottom: 20px;"></i>
-        <h2>Присоединение к чату</h2>
-        
-        <div id="roomInfo">
-            <p>Загрузка информации о комнате...</p>
-            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Проверка...</div>
+<div class="join-container" id="joinContainer">
+    <i class="fas fa-door-open" style="font-size: 64px; color: #4aac4a; margin-bottom: 20px;"></i>
+    <h2>Присоединение к чату</h2>
+    <div id="roomInfo"><p>Загрузка...</p></div>
+    <div id="authForm" style="display: none;">
+        <div class="button-group">
+            <button onclick="showLogin()" class="btn btn-primary">Войти</button>
+            <button onclick="showRegister()" class="btn btn-secondary">Зарегистрироваться</button>
         </div>
-        
-        <div id="authForm" style="display: none;">
-            <div style="background: rgba(74, 172, 74, 0.15); border-radius: 20px; padding: 20px; margin: 15px 0;">
-                <p style="margin-bottom: 5px; color: rgba(255,255,255,0.8);">У вас есть аккаунт?</p>
-            </div>
-            <div class="button-group">
-                <button onclick="showLogin()" class="btn btn-primary">Войти</button>
-                <button onclick="showRegister()" class="btn btn-secondary">Зарегистрироваться</button>
-            </div>
-        </div>
-        
-        <div id="loginForm" style="display: none;">
-            <h3>Вход в аккаунт</h3>
-            <div class="input-group">
-                <input type="text" id="loginUsername" placeholder="Имя пользователя или Email">
-            </div>
-            <div class="input-group">
-                <input type="password" id="loginPassword" placeholder="Пароль">
-            </div>
-            <button onclick="doLogin()" class="btn btn-primary">Войти</button>
-            <div class="switch-link" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</div>
-            <div id="loginMessage" class="message"></div>
-        </div>
-        
-        <div id="registerForm" style="display: none;">
-            <h3>Регистрация</h3>
-            <div class="input-group">
-                <input type="text" id="regUsername" placeholder="Имя пользователя">
-            </div>
-            <div class="input-group">
-                <input type="email" id="regEmail" placeholder="Email">
-            </div>
-            <div class="input-group">
-                <input type="password" id="regPassword" placeholder="Пароль">
-            </div>
-            <div class="input-group">
-                <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
-            </div>
-            <button onclick="doRegister()" class="btn btn-primary">Зарегистрироваться</button>
-            <div class="switch-link" onclick="showLogin()">Уже есть аккаунт? Войти</div>
-            <div id="registerMessage" class="message"></div>
-        </div>
-        
-        <div id="passwordForm" style="display: none;">
-            <h3>Введите пароль комнаты</h3>
-            <div class="input-group">
-                <input type="password" id="roomPassword" placeholder="Пароль комнаты">
-            </div>
-            <button onclick="joinRoom()" class="btn btn-primary">Войти в чат</button>
-            <div id="passwordMessage" class="message"></div>
-        </div>
-        
-        <div id="errorMessage" class="message error" style="display: none;"></div>
     </div>
-
-    <script>
-        let roomName = '';
-        let roomId = '';
-        let currentUser = '';
-        let currentToken = null;
-        let isAuthenticated = false;
-        
-        // Получаем ID из URL
-        const path = window.location.pathname;
-        roomId = path.split('/').pop();
-        
-        // Проверяем, есть ли сохранённый токен
-        const savedToken = localStorage.getItem('chat_token');
-        const savedUser = localStorage.getItem('chat_username');
-        if (savedToken && savedUser) {
-            currentUser = savedUser;
-            currentToken = savedToken;
-            isAuthenticated = true;
-        }
-        
-        async function loadRoomInfo() {
-            try {
-                const res = await fetch(`/api/room_by_id/${roomId}`);
-                const data = await res.json();
-                
-                if (data.success) {
-                    roomName = data.room_name;
-                    document.getElementById('roomInfo').innerHTML = `
-                        <p>Вас пригласили в комнату:</p>
-                        <div class="room-name">#${escapeHtml(roomName)}</div>
-                        <div class="creator-info">Создатель: ${escapeHtml(data.creator)}</div>
-                    `;
-                    
-                    // Если пользователь уже авторизован, показываем форму ввода пароля
-                    if (isAuthenticated && currentToken && currentUser) {
-                        document.getElementById('authForm').style.display = 'none';
-                        document.getElementById('passwordForm').style.display = 'block';
-                    } else {
-                        // Не авторизован — показываем выбор (войти или зарегистрироваться)
-                        document.getElementById('authForm').style.display = 'block';
-                    }
+    <div id="loginForm" style="display: none;">
+        <h3>Вход</h3>
+        <div class="input-group"><input type="text" id="loginUsername" placeholder="Имя или Email"></div>
+        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+        <button onclick="doLogin()" class="btn btn-primary">Войти</button>
+        <div class="switch-link" onclick="showRegister()">Нет аккаунта? Зарегистрироваться</div>
+        <div id="loginMessage" class="message"></div>
+    </div>
+    <div id="registerForm" style="display: none;">
+        <h3>Регистрация</h3>
+        <div class="input-group"><input type="text" id="regUsername" placeholder="Имя"></div>
+        <div class="input-group"><input type="email" id="regEmail" placeholder="Email"></div>
+        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+        <div class="input-group"><input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль"></div>
+        <button onclick="doRegister()" class="btn btn-primary">Зарегистрироваться</button>
+        <div class="switch-link" onclick="showLogin()">Уже есть аккаунт? Войти</div>
+        <div id="registerMessage" class="message"></div>
+    </div>
+    <div id="passwordForm" style="display: none;">
+        <h3>Введите пароль комнаты</h3>
+        <div class="input-group"><input type="password" id="roomPassword" placeholder="Пароль"></div>
+        <button onclick="joinRoom()" class="btn btn-primary">Войти в чат</button>
+        <div id="passwordMessage" class="message"></div>
+    </div>
+</div>
+<script>
+    let roomName = '', roomId = '', currentUser = '', currentToken = null, isAuthenticated = false;
+    const path = window.location.pathname;
+    roomId = path.split('/').pop();
+    const savedToken = localStorage.getItem('chat_token');
+    const savedUser = localStorage.getItem('chat_username');
+    if (savedToken && savedUser) { currentUser = savedUser; currentToken = savedToken; isAuthenticated = true; }
+    async function loadRoomInfo() {
+        try {
+            const res = await fetch(`/api/room_by_id/${roomId}`);
+            const data = await res.json();
+            if (data.success) {
+                roomName = data.room_name;
+                document.getElementById('roomInfo').innerHTML = `<p>Вас пригласили в комнату:</p><div class="room-name">#${escapeHtml(roomName)}</div><p>Создатель: ${escapeHtml(data.creator)}</p>`;
+                if (isAuthenticated && currentToken && currentUser) {
+                    document.getElementById('authForm').style.display = 'none';
+                    document.getElementById('passwordForm').style.display = 'block';
                 } else {
-                    document.getElementById('roomInfo').innerHTML = '<p style="color: #ff6b6b;">Комната не найдена</p>';
+                    document.getElementById('authForm').style.display = 'block';
                 }
-            } catch(e) {
-                document.getElementById('roomInfo').innerHTML = '<p style="color: #ff6b6b;">Ошибка загрузки</p>';
-                console.error('Ошибка:', e);
-            }
-        }
-        
-        function showLogin() {
-            document.getElementById('authForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            clearMessages();
-        }
-        
-        function showRegister() {
-            document.getElementById('authForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            clearMessages();
-        }
-        
-        function clearMessages() {
-            const messages = ['loginMessage', 'registerMessage', 'passwordMessage'];
-            messages.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.innerHTML = '';
-            });
-        }
-        
-        async function doLogin() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            const msgDiv = document.getElementById('loginMessage');
-            
-            if (!username || !password) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите имя и пароль</span>';
-                return;
-            }
-            
-            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Вход...</span>';
-            
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    currentUser = data.username;
-                    currentToken = data.token;
-                    localStorage.setItem('chat_token', currentToken);
-                    localStorage.setItem('chat_username', currentUser);
-                    isAuthenticated = true;
-                    
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Вход выполнен!</span>';
-                    
-                    setTimeout(() => {
-                        document.getElementById('loginForm').style.display = 'none';
-                        document.getElementById('passwordForm').style.display = 'block';
-                    }, 1000);
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
-                }
-            } catch(e) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
-            }
-        }
-        
-        async function doRegister() {
-            const username = document.getElementById('regUsername').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const password = document.getElementById('regPassword').value;
-            const confirm = document.getElementById('regPasswordConfirm').value;
-            const msgDiv = document.getElementById('registerMessage');
-            
-            if (!username || !email || !password) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Заполните все поля</span>';
-                return;
-            }
-            if (password !== confirm) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароли не совпадают</span>';
-                return;
-            }
-            if (password.length < 6) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Пароль должен быть не менее 6 символов</span>';
-                return;
-            }
-            
-            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Регистрация...</span>';
-            
-            try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    currentUser = data.username;
-                    currentToken = data.token;
-                    localStorage.setItem('chat_token', currentToken);
-                    localStorage.setItem('chat_username', currentUser);
-                    isAuthenticated = true;
-                    
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Регистрация успешна!</span>';
-                    
-                    setTimeout(() => {
-                        document.getElementById('registerForm').style.display = 'none';
-                        document.getElementById('passwordForm').style.display = 'block';
-                    }, 1000);
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
-                }
-            } catch(e) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
-            }
-        }
-        
-        async function joinRoom() {
-            const password = document.getElementById('roomPassword').value;
-            const msgDiv = document.getElementById('passwordMessage');
-            
-            if (!password) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">Введите пароль</span>';
-                return;
-            }
-            
-            msgDiv.innerHTML = '<span style="color:#4aac4a;"><i class="fas fa-spinner fa-spin"></i> Проверка...</span>';
-            
-            try {
-                const res = await fetch('/api/join_room', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room: roomName, password: password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    msgDiv.innerHTML = '<span style="color:#4aac4a;">✅ Успешно! Перенаправление...</span>';
-                    localStorage.setItem('join_room', roomName);
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                } else {
-                    msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + escapeHtml(data.error) + '</span>';
-                }
-            } catch(e) {
-                msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
-            }
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        loadRoomInfo();
-    </script>
+            } else { document.getElementById('roomInfo').innerHTML = '<p style="color:#ff6b6b;">Комната не найдена</p>'; }
+        } catch(e) { document.getElementById('roomInfo').innerHTML = '<p style="color:#ff6b6b;">Ошибка загрузки</p>'; }
+    }
+    function showLogin() { hideAll(); document.getElementById('loginForm').style.display = 'block'; }
+    function showRegister() { hideAll(); document.getElementById('registerForm').style.display = 'block'; }
+    function hideAll() {
+        document.getElementById('authForm').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('passwordForm').style.display = 'none';
+    }
+    async function doLogin() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const msgDiv = document.getElementById('loginMessage');
+        if (!username || !password) { msgDiv.innerHTML = '<span class="error">Введите имя и пароль</span>'; return; }
+        msgDiv.innerHTML = '<span class="success">Вход...</span>';
+        try {
+            const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const data = await res.json();
+            if (data.success) {
+                currentUser = data.username; currentToken = data.token;
+                localStorage.setItem('chat_token', currentToken); localStorage.setItem('chat_username', currentUser);
+                msgDiv.innerHTML = '<span class="success">✅ Вход выполнен!</span>';
+                setTimeout(() => { hideAll(); document.getElementById('passwordForm').style.display = 'block'; }, 1000);
+            } else { msgDiv.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
+        } catch(e) { msgDiv.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
+    }
+    async function doRegister() {
+        const username = document.getElementById('regUsername').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regPasswordConfirm').value;
+        const msgDiv = document.getElementById('registerMessage');
+        if (!username || !email || !password) { msgDiv.innerHTML = '<span class="error">Заполните все поля</span>'; return; }
+        if (password !== confirm) { msgDiv.innerHTML = '<span class="error">Пароли не совпадают</span>'; return; }
+        if (password.length < 6) { msgDiv.innerHTML = '<span class="error">Пароль должен быть не менее 6 символов</span>'; return; }
+        msgDiv.innerHTML = '<span class="success">Регистрация...</span>';
+        try {
+            const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email, password }) });
+            const data = await res.json();
+            if (data.success) {
+                currentUser = data.username; currentToken = data.token;
+                localStorage.setItem('chat_token', currentToken); localStorage.setItem('chat_username', currentUser);
+                msgDiv.innerHTML = '<span class="success">✅ Регистрация успешна!</span>';
+                setTimeout(() => { hideAll(); document.getElementById('passwordForm').style.display = 'block'; }, 1000);
+            } else { msgDiv.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
+        } catch(e) { msgDiv.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
+    }
+    async function joinRoom() {
+        const password = document.getElementById('roomPassword').value;
+        const msgDiv = document.getElementById('passwordMessage');
+        if (!password) { msgDiv.innerHTML = '<span class="error">Введите пароль</span>'; return; }
+        msgDiv.innerHTML = '<span class="success">Проверка...</span>';
+        try {
+            const res = await fetch('/api/join_room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room: roomName, password: password }) });
+            const data = await res.json();
+            if (data.success) {
+                msgDiv.innerHTML = '<span class="success">✅ Успешно! Перенаправление...</span>';
+                // Сохраняем информацию для автоматического входа
+                localStorage.setItem('auto_join_room', roomName);
+                localStorage.setItem('auto_join_password', password);
+                window.location.href = '/';
+            } else { msgDiv.innerHTML = '<span class="error">❌ ' + data.error + '</span>'; }
+        } catch(e) { msgDiv.innerHTML = '<span class="error">❌ Ошибка: ' + e.message + '</span>'; }
+    }
+    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    loadRoomInfo();
+</script>
 </body>
 </html>

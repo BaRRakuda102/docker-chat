@@ -76,6 +76,7 @@ async function doRegister() {
 
 // ========== ВХОД ==========
 async function doLogin() {
+    console.log('doLogin вызвана');
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     const msgDiv = document.getElementById('loginMessage');
@@ -94,6 +95,7 @@ async function doLogin() {
             body: JSON.stringify({ username, password })
         });
         const data = await res.json();
+        console.log('Ответ сервера:', data);
         
         if (data.success) {
             currentUser = data.username;
@@ -109,6 +111,7 @@ async function doLogin() {
             msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ ' + data.error + '</span>';
         }
     } catch(e) {
+        console.error('Ошибка:', e);
         msgDiv.innerHTML = '<span style="color:#ff6b6b;">❌ Ошибка: ' + e.message + '</span>';
     }
 }
@@ -139,12 +142,6 @@ function calculateAge(birthDate) {
     return age;
 }
 
-function formatBirthDate(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('ru-RU');
-}
-
 async function loadUserProfile() {
     try {
         const res = await fetch(`/api/user/profile?username=${encodeURIComponent(currentUser)}`);
@@ -153,15 +150,13 @@ async function loadUserProfile() {
             document.getElementById('profileUsername').innerHTML = data.username;
             document.getElementById('profileEmail').innerHTML = data.email;
             document.getElementById('displayName').innerHTML = data.display_name || data.username;
-            const birthDate = data.birth_date;
-            if (birthDate) {
-                const age = calculateAge(birthDate);
-                document.getElementById('userAge').innerHTML = `${age} лет (${formatBirthDate(birthDate)})`;
+            if (data.birth_date) {
+                const age = calculateAge(data.birth_date);
+                document.getElementById('userAge').innerHTML = `${age} лет (${data.birth_date})`;
             } else {
                 document.getElementById('userAge').innerHTML = 'Не указан';
             }
             document.getElementById('regDate').innerHTML = new Date(data.created_at).toLocaleDateString();
-            
             if (data.avatar_url) {
                 updateAvatarDisplay(data.avatar_url);
             }
@@ -205,7 +200,6 @@ async function saveProfile() {
 }
 
 // ========== АВАТАР ==========
-
 async function uploadAvatar(file) {
     const formData = new FormData();
     formData.append('avatar', file);
@@ -218,7 +212,7 @@ async function uploadAvatar(file) {
         });
         const data = await res.json();
         if (data.success) {
-            updateAvatarDisplay(data.avatar_url);
+            updateAvatarDisplay(data.avatar_url + '?t=' + Date.now());
             alert('Аватар обновлён!');
             loadUserProfile();
         } else {
@@ -236,10 +230,10 @@ function updateAvatarDisplay(avatarUrl) {
     const chatAvatar = document.getElementById('chatUserAvatar');
     const editPreview = document.getElementById('editAvatarPreview');
     
-    if (smallAvatar) smallAvatar.src = avatarUrl + '?t=' + Date.now();
-    if (largeAvatar) largeAvatar.src = avatarUrl + '?t=' + Date.now();
-    if (chatAvatar) chatAvatar.src = avatarUrl + '?t=' + Date.now();
-    if (editPreview) editPreview.src = avatarUrl + '?t=' + Date.now();
+    if (smallAvatar) smallAvatar.src = avatarUrl;
+    if (largeAvatar) largeAvatar.src = avatarUrl;
+    if (chatAvatar) chatAvatar.src = avatarUrl;
+    if (editPreview) editPreview.src = avatarUrl;
 }
 
 document.getElementById('avatarInput')?.addEventListener('change', function(e) {
@@ -253,13 +247,10 @@ document.getElementById('avatarInput')?.addEventListener('change', function(e) {
             alert('Пожалуйста, выберите изображение');
             return;
         }
-        
         const reader = new FileReader();
         reader.onload = function(event) {
             const editPreview = document.getElementById('editAvatarPreview');
-            if (editPreview) {
-                editPreview.src = event.target.result;
-            }
+            if (editPreview) editPreview.src = event.target.result;
         };
         reader.readAsDataURL(file);
         uploadAvatar(file);
@@ -285,7 +276,6 @@ async function loadRooms() {
 function renderRooms() {
     const container = document.getElementById('roomsList');
     if (!container) return;
-    
     if (roomsList.length === 0) {
         container.innerHTML = '<div class="empty-rooms"><i class="fas fa-comment-slash"></i><p>Нет комнат</p><small>Создайте первую комнату</small></div>';
     } else {
@@ -295,7 +285,6 @@ function renderRooms() {
                 <div class="room-details">
                     <h4>${escapeHtml(room.name)}</h4>
                     <p>Создал: ${escapeHtml(room.creator)}</p>
-                    <div class="room-stats"><span><i class="fas fa-users"></i> 0</span></div>
                 </div>
             </div>
         `).join('');
@@ -324,17 +313,14 @@ function closeCreateRoomModal() {
 async function createNewRoom() {
     const name = document.getElementById('newRoomName').value.trim();
     const password = document.getElementById('newRoomPassword').value;
-    
     if (!name || !password) {
         alert('Заполните все поля');
         return;
     }
-    
     if (name.length < 3) {
         alert('Название комнаты должно быть не менее 3 символов');
         return;
     }
-    
     try {
         const res = await fetch('/api/create_room', {
             method: 'POST',
@@ -355,13 +341,20 @@ async function createNewRoom() {
 }
 
 let pendingRoom = '';
+let pendingRoomPassword = null;
 
-function promptJoinRoom(roomName) {
+function promptJoinRoom(roomName, presetPassword = null) {
     if (isJoining) return;
     pendingRoom = roomName;
-    document.getElementById('joinRoomNameText').innerHTML = 'Комната: ' + roomName;
-    document.getElementById('joinRoomModal').style.display = 'flex';
-    document.getElementById('roomPassword').value = '';
+    pendingRoomPassword = presetPassword;
+    
+    if (presetPassword) {
+        joinSelectedRoom();
+    } else {
+        document.getElementById('joinRoomNameText').innerHTML = 'Комната: ' + roomName;
+        document.getElementById('joinRoomModal').style.display = 'flex';
+        document.getElementById('roomPassword').value = '';
+    }
 }
 
 function closeJoinRoomModal() {
@@ -370,7 +363,12 @@ function closeJoinRoomModal() {
 
 async function joinSelectedRoom() {
     if (isJoining) return;
-    const password = document.getElementById('roomPassword').value;
+    
+    let password = pendingRoomPassword;
+    if (!password) {
+        password = document.getElementById('roomPassword').value;
+    }
+    
     if (!password) {
         alert('Введите пароль');
         return;
@@ -397,7 +395,10 @@ async function joinSelectedRoom() {
             document.getElementById('chatMessages').innerHTML = '';
             await updateRoomInfo();
             connectWebSocket();
+            
             localStorage.removeItem('join_room');
+            localStorage.removeItem('auto_join_room');
+            localStorage.removeItem('auto_join_password');
         } else {
             alert('Ошибка: ' + data.error);
         }
@@ -405,6 +406,7 @@ async function joinSelectedRoom() {
         alert('Ошибка: ' + e.message);
     } finally {
         isJoining = false;
+        pendingRoomPassword = null;
     }
 }
 
@@ -416,20 +418,15 @@ function leaveToRooms() {
 }
 
 // ========== ПРИГЛАШЕНИЯ ==========
-
 async function updateRoomInfo() {
     try {
         const response = await fetch(`/api/rooms/${currentRoom}/info`);
         const data = await response.json();
-        
         if (data.success) {
             currentRoomId = data.room.id;
             isRoomCreator = (data.room.creator === currentUser);
-            
             const settingsBtn = document.getElementById('roomSettingsBtn');
-            if (settingsBtn) {
-                settingsBtn.style.display = isRoomCreator ? 'flex' : 'none';
-            }
+            if (settingsBtn) settingsBtn.style.display = isRoomCreator ? 'flex' : 'none';
         }
     } catch (error) {
         console.error('Ошибка обновления информации:', error);
@@ -454,29 +451,21 @@ function copyInviteLink() {
 }
 
 // ========== УПРАВЛЕНИЕ КОМНАТОЙ ==========
-
 async function showRoomSettings() {
     try {
         const response = await fetch(`/api/rooms/${currentRoom}/info`);
         const data = await response.json();
-        
         if (data.success) {
             document.getElementById('settingsRoomName').textContent = data.room.name;
             document.getElementById('settingsRoomCreator').textContent = data.room.creator;
             document.getElementById('settingsMemberCount').textContent = data.room.member_count;
             document.getElementById('settingsRoomId').textContent = data.room.id;
-            
             await loadRoomMembers();
-            
             const deleteSection = document.getElementById('deleteRoomSection');
-            if (deleteSection) {
-                deleteSection.style.display = isRoomCreator ? 'block' : 'none';
-            }
-            
+            if (deleteSection) deleteSection.style.display = isRoomCreator ? 'block' : 'none';
             document.getElementById('roomSettingsModal').style.display = 'flex';
         }
     } catch (error) {
-        console.error('Ошибка получения информации о комнате:', error);
         alert('Не удалось загрузить информацию о комнате');
     }
 }
@@ -489,15 +478,12 @@ async function loadRoomMembers() {
     try {
         const response = await fetch(`/api/rooms/${currentRoom}/members`);
         const data = await response.json();
-        
         if (data.success && data.members) {
             const membersList = document.getElementById('roomMembersList');
             membersList.innerHTML = data.members.map(member => `
                 <div class="member-item">
                     <span class="member-name">${escapeHtml(member)} ${member === currentUser ? '(Вы)' : ''}</span>
-                    ${member !== currentUser && isRoomCreator ? `
-                        <button onclick="kickUser('${member}')" class="kick-btn">Выгнать</button>
-                    ` : ''}
+                    ${member !== currentUser && isRoomCreator ? `<button onclick="kickUser('${member}')" class="kick-btn">Выгнать</button>` : ''}
                 </div>
             `).join('');
         }
@@ -508,30 +494,17 @@ async function loadRoomMembers() {
 
 async function renameRoom() {
     const newName = document.getElementById('editRoomName').value.trim();
-    
-    if (!newName) {
-        alert('Введите новое название комнаты');
+    if (!newName || newName.length < 3) {
+        alert('Введите корректное название (минимум 3 символа)');
         return;
     }
-    
-    if (newName.length < 3) {
-        alert('Название должно быть не менее 3 символов');
-        return;
-    }
-    
     try {
         const response = await fetch('/api/rooms/rename', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                old_name: currentRoom, 
-                new_name: newName, 
-                username: currentUser 
-            })
+            body: JSON.stringify({ old_name: currentRoom, new_name: newName, username: currentUser })
         });
-        
         const data = await response.json();
-        
         if (data.success) {
             alert('Название комнаты изменено!');
             currentRoom = newName;
@@ -543,27 +516,19 @@ async function renameRoom() {
             alert('Ошибка: ' + data.error);
         }
     } catch (error) {
-        console.error('Ошибка переименования:', error);
         alert('Ошибка соединения с сервером');
     }
 }
 
 async function kickUser(username) {
     if (!confirm(`Выгнать пользователя ${username} из комнаты?`)) return;
-    
     try {
         const response = await fetch('/api/rooms/kick', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                room_name: currentRoom, 
-                username: username, 
-                admin: currentUser 
-            })
+            body: JSON.stringify({ room_name: currentRoom, username: username, admin: currentUser })
         });
-        
         const data = await response.json();
-        
         if (data.success) {
             alert(`Пользователь ${username} выгнан из комнаты`);
             await loadRoomMembers();
@@ -572,7 +537,6 @@ async function kickUser(username) {
             alert('Ошибка: ' + data.error);
         }
     } catch (error) {
-        console.error('Ошибка выгона:', error);
         alert('Ошибка соединения с сервером');
     }
 }
@@ -589,14 +553,11 @@ function closeConfirmDelete() {
 
 async function deleteRoom() {
     closeConfirmDelete();
-    
     try {
         const response = await fetch(`/api/rooms/delete/${currentRoom}?username=${encodeURIComponent(currentUser)}`, {
             method: 'DELETE'
         });
-        
         const data = await response.json();
-        
         if (data.success) {
             alert(`Комната "${currentRoom}" успешно удалена`);
             if (ws) ws.close();
@@ -607,35 +568,22 @@ async function deleteRoom() {
             alert('Ошибка: ' + (data.error || 'Не удалось удалить комнату'));
         }
     } catch (error) {
-        console.error('Ошибка удаления комнаты:', error);
         alert('Ошибка соединения с сервером');
     }
 }
 
 // ========== ОТПРАВКА ФАЙЛОВ ==========
-
 async function uploadFile(file) {
     const formData = new FormData();
     formData.append('file', file);
-    
     try {
         const res = await fetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        
         if (data.url) {
             if (file.type.startsWith('image/')) {
-                ws.send(JSON.stringify({
-                    type: 'image',
-                    url: data.url,
-                    caption: ''
-                }));
+                ws.send(JSON.stringify({ type: 'image', url: data.url, caption: '' }));
             } else {
-                ws.send(JSON.stringify({
-                    type: 'file',
-                    url: data.url,
-                    filename: file.name,
-                    size: file.size
-                }));
+                ws.send(JSON.stringify({ type: 'file', url: data.url, filename: file.name, size: file.size }));
             }
         }
     } catch(e) {
@@ -644,7 +592,6 @@ async function uploadFile(file) {
 }
 
 // ========== ПРОСМОТР ИЗОБРАЖЕНИЙ ==========
-
 function openImageViewer(imageUrl) {
     const modal = document.getElementById('imageViewerModal');
     const img = document.getElementById('viewerImage');
@@ -669,53 +616,66 @@ function connectWebSocket() {
     };
     
     ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        const messagesDiv = document.getElementById('chatMessages');
-        
-        if (data.type === 'message') {
-            const isOwn = (data.username === currentUser);
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-            msgDiv.innerHTML = `
-                <div class="chat-message-header">
-                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
-                    <span>${data.timestamp}</span>
-                </div>
-                <div class="chat-message-text">${escapeHtml(data.message)}</div>
-            `;
-            messagesDiv.appendChild(msgDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            if (data.username !== currentUser) playNotificationSound();
-        } else if (data.type === 'image') {
-            const isOwn = (data.username === currentUser);
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
-            msgDiv.innerHTML = `
-                <div class="chat-message-header">
-                    <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
-                    <span>${data.timestamp}</span>
-                </div>
-                <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
-                ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
-            `;
-            messagesDiv.appendChild(msgDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        } else if (data.type === 'system') {
-            const sysDiv = document.createElement('div');
-            sysDiv.className = 'system-message';
-            sysDiv.innerHTML = data.message;
-            messagesDiv.appendChild(sysDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        } else if (data.type === 'users') {
-            document.getElementById('chatUserCount').innerHTML = data.count;
-        } else if (data.type === 'kicked') {
-            alert(data.message);
-            leaveToRooms();
-        } else if (data.type === 'room_deleted') {
-            alert(data.message);
-            leaveToRooms();
+    const data = JSON.parse(event.data);
+    const messagesDiv = document.getElementById('chatMessages');
+    
+    // Обработка обновления списка комнат
+    if (data.type === 'room_list_update') {
+        if (data.action === 'delete') {
+            roomsList = roomsList.filter(r => r.name !== data.room_name);
+            renderRooms();
+            if (currentRoom === data.room_name) {
+                alert(`Комната "${data.room_name}" была удалена создателем`);
+                leaveToRooms();
+            }
         }
-    };
+        return;
+    }
+    
+    if (data.type === 'message') {
+        const isOwn = (data.username === currentUser);
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+        msgDiv.innerHTML = `
+            <div class="chat-message-header">
+                <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}; cursor: pointer;" onclick="showUserContextMenu(event, '${data.username}')">${escapeHtml(data.username)}</span>
+                <span>${data.timestamp}</span>
+            </div>
+            <div class="chat-message-text">${escapeHtml(data.message)}</div>
+        `;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        if (data.username !== currentUser) playNotificationSound();
+    } else if (data.type === 'image') {
+        const isOwn = (data.username === currentUser);
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+        msgDiv.innerHTML = `
+            <div class="chat-message-header">
+                <span style="color: ${isOwn ? '#4aac4a' : '#ff8c42'}">${escapeHtml(data.username)}</span>
+                <span>${data.timestamp}</span>
+            </div>
+            <img src="${data.url}" class="chat-image" onclick="openImageViewer('${data.url}')">
+            ${data.caption ? `<div class="image-caption">${escapeHtml(data.caption)}</div>` : ''}
+        `;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.type === 'system') {
+        const sysDiv = document.createElement('div');
+        sysDiv.className = 'system-message';
+        sysDiv.innerHTML = data.message;
+        messagesDiv.appendChild(sysDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.type === 'users') {
+        document.getElementById('chatUserCount').innerHTML = data.count;
+    } else if (data.type === 'kicked') {
+        alert(data.message);
+        leaveToRooms();
+    } else if (data.type === 'room_deleted') {
+        alert(data.message);
+        leaveToRooms();
+    }
+};
     
     ws.onerror = (error) => console.error('WebSocket ошибка:', error);
     ws.onclose = () => console.log('WebSocket отключен');
@@ -728,6 +688,34 @@ function sendChatMessage() {
     ws.send(JSON.stringify({ type: 'message', message }));
     input.value = '';
 }
+
+function showUserContextMenu(event, username) {
+    event.stopPropagation();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.position = 'fixed';
+    menu.style.left = event.pageX + 'px';
+    menu.style.top = event.pageY + 'px';
+    menu.style.backgroundColor = '#0d1f0d';
+    menu.style.border = '1px solid #4aac4a';
+    menu.style.borderRadius = '12px';
+    menu.style.padding = '8px 0';
+    menu.style.zIndex = '1000';
+    menu.innerHTML = `
+        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="viewUserProfile('${username}'); this.parentElement.remove();">👤 Профиль</div>
+        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="mentionUser('${username}'); this.parentElement.remove();">@ Отметить</div>
+        <div style="padding: 8px 16px; cursor: pointer; color: white;" onclick="startPrivateChat('${username}'); this.parentElement.remove();">🔒 Написать лично</div>
+    `;
+    document.body.appendChild(menu);
+    setTimeout(() => document.addEventListener('click', function closeMenu(e) { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeMenu); } }), 10);
+}
+
+function viewUserProfile(username) { alert(`Профиль пользователя ${username}`); }
+function mentionUser(username) {
+    const input = document.getElementById('chatInput');
+    if (input) input.value += `@${username} `;
+}
+async function startPrivateChat(username) { alert(`Личный чат с ${username} (в разработке)`); }
 
 document.getElementById('chatInput')?.addEventListener('paste', function(e) {
     const items = e.clipboardData.items;
@@ -742,13 +730,10 @@ document.getElementById('chatInput')?.addEventListener('paste', function(e) {
 
 document.getElementById('fileInput')?.addEventListener('change', function(e) {
     const files = e.target.files;
-    for (const file of files) {
-        uploadFile(file);
-    }
+    for (const file of files) uploadFile(file);
     this.value = '';
 });
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ==========
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -781,7 +766,18 @@ if (savedToken && savedUser) {
 const joinRoomFromInvite = localStorage.getItem('join_room');
 if (joinRoomFromInvite && !currentRoom) {
     localStorage.removeItem('join_room');
-    setTimeout(() => {
-        promptJoinRoom(joinRoomFromInvite);
-    }, 500);
+    setTimeout(() => promptJoinRoom(joinRoomFromInvite), 500);
 }
+
+// Автоматический вход в комнату после приглашения
+const autoJoinRoom = localStorage.getItem('auto_join_room');
+const autoJoinPassword = localStorage.getItem('auto_join_password');
+if (autoJoinRoom && autoJoinPassword && !currentRoom) {
+    localStorage.removeItem('auto_join_room');
+    localStorage.removeItem('auto_join_password');
+    setTimeout(() => {
+        promptJoinRoom(autoJoinRoom, autoJoinPassword);
+    }, 1000);
+}
+
+console.log('Script loaded successfully');

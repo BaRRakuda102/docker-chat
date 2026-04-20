@@ -14,25 +14,11 @@ body {
     padding: 20px;
 }
 
-/* Резервные стили для Edge */
-body {
-    background: #0a1a0a !important;
-    color: white !important;
-}
-
-.glass-container, .rooms-page, .join-container {
-    background: rgba(13, 31, 13, 0.95) !important;
-    backdrop-filter: none !important;
-}
-
-input, button {
-    background: #1a3a1a !important;
-    color: white !important;
-    border: 1px solid #4aac4a !important;
-}
-
-.btn-primary {
-    background: #3a8c3a !important;
+/* Резервные стили для Edge (без backdrop-filter) */
+body, .glass-container, .rooms-page, .join-container, .modal-content, .profile-dropdown {
+    background: #0a1a0a;
+    background: linear-gradient(135deg, #0a1a0a 0%, #000000 100%);
+    color: white;
 }
 
 /* ========== СТАРТОВАЯ СТРАНИЦА ========== */
@@ -40,10 +26,9 @@ input, button {
     max-width: 1200px;
     width: 100%;
     display: flex;
-    background: rgba(13, 31, 13, 0.85);
-    backdrop-filter: blur(20px);
+    background: rgba(13, 31, 13, 0.9);
     border-radius: 40px;
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
@@ -51,7 +36,7 @@ input, button {
 .info-panel {
     flex: 1;
     padding: 50px;
-    background: linear-gradient(135deg, rgba(26, 58, 26, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+    background: rgba(0, 0, 0, 0.4);
 }
 
 .logo {
@@ -98,7 +83,7 @@ input, button {
     padding: 16px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 20px;
-    border: 1px solid rgba(74, 172, 74, 0.3);
+    border: 1px solid #4aac4a;
 }
 
 .feature i {
@@ -119,7 +104,7 @@ input, button {
 .auth-panel {
     width: 420px;
     padding: 50px 40px;
-    background: rgba(13, 31, 13, 0.7);
+    background: rgba(0, 0, 0, 0.6);
 }
 
 .form-title {
@@ -137,7 +122,7 @@ input, button {
     width: 100%;
     padding: 14px 18px;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     border-radius: 16px;
     color: white;
     font-size: 15px;
@@ -145,7 +130,7 @@ input, button {
 
 .input-group input:focus {
     outline: none;
-    border-color: #4aac4a;
+    border-color: #6acc6a;
 }
 
 .btn {
@@ -170,7 +155,7 @@ input, button {
 
 .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     color: white;
     margin-top: 15px;
 }
@@ -199,10 +184,9 @@ input, button {
     max-width: 1000px;
     width: 100%;
     margin: 0 auto;
-    background: rgba(13, 31, 13, 0.85);
-    backdrop-filter: blur(20px);
+    background: rgba(13, 31, 13, 0.9);
     border-radius: 40px;
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     padding: 30px;
 }
 
@@ -212,7 +196,7 @@ input, button {
     align-items: center;
     margin-bottom: 25px;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(74, 172, 74, 0.3);
+    border-bottom: 1px solid #4aac4a;
     flex-wrap: wrap;
     gap: 15px;
 }
@@ -244,16 +228,11 @@ input, button {
     gap: 6px;
     font-size: 13px;
     font-weight: 500;
-    transition: all 0.3s;
 }
 
 .create-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(74, 172, 74, 0.4);
-}
-
-.create-btn i {
-    font-size: 12px;
 }
 
 .user-info {
@@ -264,22 +243,15 @@ input, button {
     padding: 6px 14px;
     border-radius: 30px;
     cursor: pointer;
-    transition: all 0.3s;
 }
 
 .user-info:hover {
     background: rgba(74, 172, 74, 0.25);
 }
 
-.user-info i {
-    color: #4aac4a;
-    font-size: 14px;
-}
-
 .user-info span {
     color: white;
     font-size: 13px;
-    font-weight: 500;
 }
 
 .search-box {
@@ -290,7 +262,7 @@ input, button {
     width: 100%;
     padding: 12px 18px;
     background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(74, 172, 74, 0.3);
+    border: 1px solid #4aac4a;
     border-radius: 30px;
     color: white;
     font-size: 14px;
@@ -303,10 +275,9 @@ input, button {
 
 .search-box input:focus {
     outline: none;
-    border-color: #4aac4a;
+    border-color: #6acc6a;
 }
 
-/* Сетка комнат - 5 колонок */
 .rooms-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -316,53 +287,37 @@ input, button {
     padding: 10px 5px;
 }
 
-/* Адаптивность для маленьких экранов */
 @media (max-width: 1200px) {
-    .rooms-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
+    .rooms-grid { grid-template-columns: repeat(4, 1fr); }
 }
-
 @media (max-width: 900px) {
-    .rooms-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
+    .rooms-grid { grid-template-columns: repeat(3, 1fr); }
 }
-
 @media (max-width: 600px) {
-    .rooms-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+    .rooms-grid { grid-template-columns: repeat(2, 1fr); }
 }
-
 @media (max-width: 400px) {
-    .rooms-grid {
-        grid-template-columns: 1fr;
-    }
+    .rooms-grid { grid-template-columns: 1fr; }
 }
 
 .rooms-grid::-webkit-scrollbar {
     width: 5px;
 }
-
 .rooms-grid::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
 }
-
 .rooms-grid::-webkit-scrollbar-thumb {
     background: #4aac4a;
     border-radius: 10px;
 }
 
-/* Квадратная карточка комнаты */
 .room-card {
     background: rgba(26, 58, 26, 0.4);
-    border: 1px solid rgba(74, 172, 74, 0.3);
+    border: 1px solid #4aac4a;
     border-radius: 16px;
     padding: 12px;
     cursor: pointer;
-    transition: all 0.3s;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -373,7 +328,6 @@ input, button {
 
 .room-card:hover {
     background: rgba(74, 172, 74, 0.15);
-    border-color: #4aac4a;
     transform: translateY(-3px);
 }
 
@@ -397,24 +351,11 @@ input, button {
     color: white;
     font-size: 14px;
     margin-bottom: 5px;
-    word-break: break-word;
 }
 
 .room-details p {
     color: rgba(255, 255, 255, 0.5);
     font-size: 10px;
-    margin-bottom: 5px;
-}
-
-.room-stats {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-}
-
-.room-stats span {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.4);
 }
 
 .empty-rooms {
@@ -422,11 +363,6 @@ input, button {
     text-align: center;
     padding: 60px;
     color: rgba(255, 255, 255, 0.5);
-}
-
-.empty-rooms i {
-    font-size: 64px;
-    margin-bottom: 20px;
 }
 
 /* ========== ЧАТ ========== */
@@ -442,8 +378,8 @@ input, button {
 
 .chat-sidebar {
     width: 280px;
-    background: rgba(13, 31, 13, 0.95);
-    border-right: 1px solid rgba(74, 172, 74, 0.3);
+    background: #0a0f0a;
+    border-right: 1px solid #4aac4a;
     display: flex;
     flex-direction: column;
 }
@@ -456,20 +392,13 @@ input, button {
 
 .chat-header {
     padding: 16px 24px;
-    background: rgba(13, 31, 13, 0.8);
-    border-bottom: 1px solid rgba(74, 172, 74, 0.3);
+    background: #0d1f0d;
+    border-bottom: 1px solid #4aac4a;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.chat-header div:first-child {
-    color: white;
-    font-weight: 600;
-    font-size: 18px;
-}
-
-/* Контейнер для сообщений - с отступами 300px по бокам */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -479,45 +408,32 @@ input, button {
     gap: 4px;
 }
 
-/* Адаптивные отступы для маленьких экранов */
 @media (max-width: 1200px) {
-    .chat-messages {
-        padding: 20px 150px;
-    }
+    .chat-messages { padding: 20px 150px; }
 }
-
 @media (max-width: 900px) {
-    .chat-messages {
-        padding: 20px 80px;
-    }
+    .chat-messages { padding: 20px 80px; }
 }
-
 @media (max-width: 600px) {
-    .chat-messages {
-        padding: 20px 20px;
-    }
+    .chat-messages { padding: 20px 20px; }
 }
 
-/* Отдельное сообщение */
 .chat-message {
     display: flex;
     flex-direction: column;
     max-width: 100%;
 }
 
-/* Свои сообщения (справа) */
 .chat-message.own {
     align-self: flex-end;
     align-items: flex-end;
 }
 
-/* Чужие сообщения (слева) */
 .chat-message.other {
     align-self: flex-start;
     align-items: flex-start;
 }
 
-/* Заголовок сообщения (ник и время) */
 .chat-message-header {
     display: flex;
     gap: 8px;
@@ -530,48 +446,32 @@ input, button {
     flex-direction: row-reverse;
 }
 
-/* Текст сообщения - по ширине контента */
 .chat-message-text {
     background: rgba(26, 58, 26, 0.7);
     padding: 6px 12px;
     border-radius: 18px;
     color: white;
     font-size: 14px;
-    line-height: 1.4;
     word-wrap: break-word;
     display: inline-block;
-    width: auto;
     max-width: 250px;
 }
 
-/* Свои сообщения — зелёный фон */
 .chat-message.own .chat-message-text {
     background: linear-gradient(135deg, #3a8c3a, #4aac4a);
     border-bottom-right-radius: 4px;
 }
 
-/* Чужие сообщения — тёмный фон */
 .chat-message.other .chat-message-text {
     background: rgba(26, 58, 26, 0.7);
     border-bottom-left-radius: 4px;
 }
 
-/* Сообщения подряд от одного пользователя — скрываем ник */
 .chat-message.own + .chat-message.own .chat-message-header,
 .chat-message.other + .chat-message.other .chat-message-header {
     display: none;
 }
 
-/* Скругления для сообщений подряд */
-.chat-message.own + .chat-message.own .chat-message-text {
-    border-top-right-radius: 12px;
-}
-
-.chat-message.other + .chat-message.other .chat-message-text {
-    border-top-left-radius: 12px;
-}
-
-/* Системные сообщения */
 .system-message {
     text-align: center;
     color: rgba(255, 255, 255, 0.5);
@@ -582,10 +482,8 @@ input, button {
     border-radius: 20px;
     margin: 4px auto;
     width: fit-content;
-    max-width: 80%;
 }
 
-/* Кнопки в чате */
 .room-actions {
     display: flex;
     flex-direction: column;
@@ -595,14 +493,12 @@ input, button {
 
 .settings-btn, .invite-btn, .leave-room-btn {
     background: rgba(74, 172, 74, 0.2);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     border-radius: 30px;
     padding: 10px 16px;
     color: white;
     cursor: pointer;
-    transition: all 0.3s;
     font-size: 13px;
-    font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -610,98 +506,34 @@ input, button {
     width: 100%;
 }
 
-.settings-btn:hover {
+.settings-btn:hover, .invite-btn:hover {
     background: rgba(74, 172, 74, 0.4);
-    transform: translateY(-2px);
 }
-
-.invite-btn:hover {
-    background: rgba(74, 172, 74, 0.4);
-    transform: translateY(-2px);
-}
-
 .leave-room-btn:hover {
     background: rgba(139, 58, 58, 0.5);
-    transform: translateY(-2px);
 }
 
-.settings-btn i, .invite-btn i, .leave-room-btn i {
-    font-size: 14px;
-}
-
-/* Кнопка прикрепления файла */
 .attach-btn {
     background: rgba(74, 172, 74, 0.2);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     border-radius: 30px;
     padding: 0 16px;
     color: white;
     cursor: pointer;
-    transition: all 0.3s;
     font-size: 16px;
 }
 
-.attach-btn:hover {
-    background: rgba(74, 172, 74, 0.4);
-    transform: scale(0.98);
-}
-
-/* Стили для загруженных изображений в чате */
 .chat-image {
     max-width: 250px;
     max-height: 200px;
     border-radius: 16px;
     cursor: pointer;
-    transition: transform 0.2s;
-    border: 1px solid rgba(74, 172, 74, 0.4);
-}
-
-.chat-image:hover {
-    transform: scale(1.02);
-}
-
-.image-caption {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 4px;
-    text-align: center;
-}
-
-/* Файлы в чате */
-.chat-file {
-    background: rgba(74, 172, 74, 0.1);
-    border: 1px solid rgba(74, 172, 74, 0.3);
-    border-radius: 12px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.chat-file i {
-    font-size: 24px;
-    color: #4aac4a;
-}
-
-.chat-file-info {
-    flex: 1;
-}
-
-.chat-file-name {
-    color: white;
-    font-size: 13px;
-}
-
-.chat-file-size {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 10px;
 }
 
 .chat-input-area {
     padding: 16px 24px;
-    background: rgba(13, 31, 13, 0.8);
-    border-top: 1px solid rgba(74, 172, 74, 0.3);
+    background: #0d1f0d;
+    border-top: 1px solid #4aac4a;
     display: flex;
     gap: 12px;
 }
@@ -710,7 +542,7 @@ input, button {
     flex: 1;
     padding: 12px 18px;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     border-radius: 24px;
     color: white;
 }
@@ -732,7 +564,6 @@ input, button {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -740,11 +571,11 @@ input, button {
 }
 
 .modal-content {
-    background: rgba(13, 31, 13, 0.98);
+    background: #0d1f0d;
     border-radius: 24px;
     padding: 32px;
     width: 380px;
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
 }
 
 .modal-header {
@@ -752,10 +583,6 @@ input, button {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-}
-
-.modal-header h3 {
-    color: white;
 }
 
 .close-btn {
@@ -766,15 +593,14 @@ input, button {
     cursor: pointer;
 }
 
-/* Профиль выпадающий */
 .profile-dropdown {
     position: absolute;
     top: 60px;
     right: 0;
     width: 280px;
-    background: rgba(13, 31, 13, 0.98);
+    background: #0d1f0d;
     border-radius: 20px;
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     display: none;
     z-index: 100;
 }
@@ -786,7 +612,7 @@ input, button {
 .profile-dropdown-header {
     padding: 20px;
     text-align: center;
-    border-bottom: 1px solid rgba(74, 172, 74, 0.3);
+    border-bottom: 1px solid #4aac4a;
 }
 
 .profile-dropdown-header .avatar {
@@ -802,15 +628,6 @@ input, button {
     overflow: hidden;
 }
 
-.profile-dropdown-header h4 {
-    color: white;
-}
-
-.profile-dropdown-header p {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
-}
-
 .profile-dropdown-info {
     padding: 15px;
 }
@@ -823,104 +640,36 @@ input, button {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.profile-dropdown-info .info-row span:first-child {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.profile-dropdown-info .info-row span:last-child {
-    color: white;
-}
-
 .profile-dropdown-actions {
     padding: 15px;
     display: flex;
     gap: 10px;
-    border-top: 1px solid rgba(74, 172, 74, 0.3);
+    border-top: 1px solid #4aac4a;
+}
+
+.edit-profile-btn, .logout-profile-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 30px;
+    cursor: pointer;
 }
 
 .edit-profile-btn {
     background: rgba(74, 172, 74, 0.2);
-    border: 1px solid rgba(74, 172, 74, 0.4);
+    border: 1px solid #4aac4a;
     color: white;
-    border-radius: 30px;
-    padding: 8px 16px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.edit-profile-btn:hover {
-    background: rgba(74, 172, 74, 0.4);
 }
 
 .logout-profile-btn {
     background: rgba(139, 58, 58, 0.3);
-    border: 1px solid rgba(139, 58, 58, 0.5);
+    border: 1px solid #ff6b6b;
     color: white;
-    border-radius: 30px;
-    padding: 8px 16px;
-    cursor: pointer;
-    transition: all 0.3s;
 }
 
-.logout-profile-btn:hover {
-    background: rgba(139, 58, 58, 0.5);
-}
-
-/* Приглашение */
-.invite-link-container {
-    margin-top: 10px;
-}
-
-.invite-link-container input {
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(74, 172, 74, 0.4);
-    border-radius: 12px;
-    padding: 12px;
-    color: white;
-    width: 100%;
-    font-size: 13px;
-}
-
-/* Аватар в профиле */
-.avatar-upload {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.avatar-preview {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3a8c3a, #4aac4a);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 15px;
-    cursor: pointer;
-    overflow: hidden;
-}
-
-/* Секции настроек */
 .settings-section {
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 1px solid rgba(74, 172, 74, 0.3);
-}
-
-.settings-section h4 {
-    color: white;
-    margin-bottom: 12px;
-    font-size: 14px;
-}
-
-.settings-section p {
-    color: white;
-    font-size: 13px;
-    margin: 8px 0;
-}
-
-.settings-section p strong {
-    color: #4aac4a;
+    border-bottom: 1px solid #4aac4a;
 }
 
 .danger-section {
@@ -934,10 +683,6 @@ input, button {
     color: #ff6b6b;
 }
 
-.danger-section p {
-    color: white;
-}
-
 .danger-btn {
     background: rgba(139, 58, 58, 0.8);
     border: none;
@@ -945,34 +690,7 @@ input, button {
     padding: 10px 20px;
     color: white;
     cursor: pointer;
-    transition: all 0.2s;
     margin-top: 10px;
-}
-
-.danger-btn:hover {
-    background: rgba(139, 58, 58, 1);
-    transform: scale(0.98);
-}
-
-.secondary-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(74, 172, 74, 0.4);
-    border-radius: 12px;
-    padding: 10px 20px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.secondary-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 20px;
 }
 
 .member-item {
@@ -983,11 +701,6 @@ input, button {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.member-name {
-    color: white;
-    font-size: 13px;
-}
-
 .kick-btn {
     background: rgba(139, 58, 58, 0.5);
     border: none;
@@ -996,42 +709,6 @@ input, button {
     color: white;
     cursor: pointer;
     font-size: 11px;
-}
-
-.kick-btn:hover {
-    background: rgba(139, 58, 58, 0.8);
-}
-
-/* Стили для скроллбара чата */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-    background: rgba(74, 172, 74, 0.5);
-    border-radius: 10px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(74, 172, 74, 0.8);
-}
-
-/* Принудительно белый текст во всех модальных окнах */
-.modal-content,
-.modal-content p,
-.modal-content h3,
-.modal-content span,
-.modal-content div,
-#confirmDeleteModal p,
-#confirmDeleteModal .modal-content p,
-#roomSettingsModal p,
-#roomSettingsModal span {
-    color: white !important;
 }
 
 @media (max-width: 900px) {

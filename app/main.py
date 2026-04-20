@@ -424,11 +424,13 @@ async def delete_room(room_name: str, username: str, db: Session = Depends(get_d
         if room.creator != username:
             return {"success": False, "error": "Только создатель может удалить комнату"}
         
+        # Удаляем из БД
         db.delete(room)
         db.query(RoomMessage).filter(RoomMessage.room_name == room_name).delete()
         db.query(RoomUser).filter(RoomUser.room_name == room_name).delete()
         db.commit()
         
+        # Удаляем из памяти
         if room_name in rooms_data:
             del rooms_data[room_name]
         if room_name in rooms_list:
@@ -438,6 +440,23 @@ async def delete_room(room_name: str, username: str, db: Session = Depends(get_d
         if room_name in room_users:
             del room_users[room_name]
         
+        # Отправляем уведомление ВСЕМ пользователям в системе
+        # через WebSocket о том, что комната удалена
+        notification = {
+            "type": "room_list_update",
+            "action": "delete",
+            "room_name": room_name
+        }
+        
+        # Рассылаем уведомление всем активным WebSocket соединениям
+        for room_conns in active_connections.values():
+            for connection in room_conns:
+                try:
+                    await connection.send_json(notification)
+                except:
+                    pass
+        
+        # Закрываем соединения участников этой комнаты
         if room_name in active_connections:
             for connection in list(active_connections[room_name]):
                 try:
