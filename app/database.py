@@ -31,6 +31,7 @@ class User(Base):
     is_superadmin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_seen = Column(DateTime, default=datetime.utcnow)
+    avatar_url = Column(String(500), default="/static/default-avatar.png")
     
     def set_password(self, password: str):
         salt = bcrypt.gensalt()

@@ -5,10 +5,12 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app
-      - uploads_data:/app/uploads
+      - ./uploads:/app/uploads
+      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
 
 volumes:
-  uploads_data:
+  uploads:
+  data:

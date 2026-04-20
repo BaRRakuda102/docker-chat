@@ -605,8 +605,14 @@ function closeImageViewer() {
 
 // ========== ЧАТ ==========
 function connectWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Правильное определение протокола для HTTPS
+    let protocol = 'ws:';
+    if (window.location.protocol === 'https:') {
+        protocol = 'wss:';
+    }
     const wsUrl = `${protocol}//${window.location.host}/ws/${currentRoom}/${currentUser}/ws_${Date.now()}`;
+    console.log('WebSocket URL:', wsUrl);
+    
     ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
