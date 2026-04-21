@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timedelta
 import secrets
 import os
+import sqlite3
 
 # Получаем URL базы данных
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/chat.db')
@@ -147,6 +148,37 @@ class PrivateMessage(Base):
     
     # Связь
     chat = relationship("PrivateChat", back_populates="messages")
+
+def upgrade_sqlite_schema():
+    """Принудительное обновление схемы SQLite (добавление недостающих колонок)"""
+    if not DATABASE_URL.startswith('sqlite'):
+        return
+    
+    # Извлекаем путь к файлу БД
+    db_path = DATABASE_URL.replace('sqlite:///', '')
+    if not os.path.exists(db_path):
+        return
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Проверяем и добавляем недостающие колонки в таблицу users
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'session_token' not in columns:
+        print("Adding session_token column to users table")
+        cursor.execute("ALTER TABLE users ADD COLUMN session_token VARCHAR(64)")
+    
+    if 'session_expires' not in columns:
+        print("Adding session_expires column to users table")
+        cursor.execute("ALTER TABLE users ADD COLUMN session_expires DATETIME")
+    
+    conn.commit()
+    conn.close()
+
+# Обновляем схему перед созданием таблиц
+upgrade_sqlite_schema()
 
 # Создаём таблицы (для dev, в проде использовать Alembic)
 Base.metadata.create_all(bind=engine)
