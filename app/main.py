@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import secrets
 import os
 from sqlalchemy import Date
-from passlib.context import CryptContext  # <-- ДОБАВЛЕНО: импорт в начало файла
+from passlib.context import CryptContext
 
 # Создаем контекст для bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -15,12 +15,21 @@ DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/chat.db')
 
 # Исправлено: поддержка postgres:// и postgresql://
 if DATABASE_URL and (DATABASE_URL.startswith('postgres://') or DATABASE_URL.startswith('postgresql://')):
+    # Railway предоставляет postgres://, нужно конвертировать в postgresql:// для SQLAlchemy 1.4+
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    
     # Добавляем sslmode если его нет
     if 'sslmode' not in DATABASE_URL:
         separator = '?' if '?' not in DATABASE_URL else '&'
         DATABASE_URL = DATABASE_URL + separator + 'sslmode=require'
 
-engine = create_engine(DATABASE_URL)
+# Исправлено: добавлены connect_args для SQLite (thread safety)
+connect_args = {}
+if DATABASE_URL and DATABASE_URL.startswith('sqlite'):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -51,29 +60,24 @@ class User(Base):
     private_chats_2 = relationship("PrivateChat", foreign_keys="PrivateChat.user2_id", back_populates="user2")
     
     def set_password(self, password: str):
-        # Используем общий pwd_context
         self.password_hash = pwd_context.hash(password)
     
     def verify_password(self, password: str) -> bool:
-        # Используем общий pwd_context
         return pwd_context.verify(password, self.password_hash)
     
     def generate_verification_code(self):
-        # Криптостойкий код вместо random.randint
         self.verification_code = str(secrets.randbelow(900000) + 100000)
         self.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
         return self.verification_code
     
     def is_session_valid(self):
-        """Проверяет, не истёк ли токен сессии"""
         if not self.session_token or not self.session_expires:
             return False
         return self.session_expires > datetime.utcnow()
     
     def refresh_session(self):
-        """Обновляет токен и время жизни сессии"""
         self.session_token = secrets.token_urlsafe(32)
-        self.session_expires = datetime.utcnow() + timedelta(days=7)  # 7 дней
+        self.session_expires = datetime.utcnow() + timedelta(days=7)
         return self.session_token
 
 class Room(Base):
@@ -153,8 +157,11 @@ class PrivateMessage(Base):
     # Связь
     chat = relationship("PrivateChat", back_populates="messages")
 
-# Создаём таблицы (для dev, в проде использовать Alembic)
-Base.metadata.create_all(bind=engine)
+# Исправлено: создание таблиц обернуто в try-except для безопасного запуска
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create tables: {e}")
 
 def get_db():
     db = SessionLocal()

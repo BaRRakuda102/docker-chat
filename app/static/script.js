@@ -769,7 +769,8 @@ async function sendImageFromPreview() {
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     var userId = localStorage.getItem('chat_user_id') || '0';
-    var wsUrl = protocol + '//' + window.location.host + '/ws/' + currentRoom + '/' + currentUser + '/' + userId;
+    // Исправлено: используем encodeURIComponent для имени пользователя и комнаты
+    var wsUrl = protocol + '//' + window.location.host + '/ws/' + encodeURIComponent(currentRoom) + '/' + encodeURIComponent(currentUser) + '/' + userId;
     ws = new WebSocket(wsUrl);
     
     ws.onopen = function() {
