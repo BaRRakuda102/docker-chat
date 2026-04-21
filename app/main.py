@@ -16,6 +16,7 @@ import mimetypes
 from database import get_db, User, Room, RoomMessage, RoomUser, PrivateChat, PrivateMessage
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from pathlib import Path
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
