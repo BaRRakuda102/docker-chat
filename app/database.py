@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, timedelta
 import secrets
 import os
-from sqlalchemy import Date
 
 # Получаем URL базы данных
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/chat.db')
