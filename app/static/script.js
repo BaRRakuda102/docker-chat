@@ -1,6 +1,7 @@
 // ========== ОСНОВНЫЕ ПЕРЕМЕННЫЕ ==========
 let ws = null;
 let currentUser = '';
+let currentUserId = null;
 let currentRoom = '';
 let roomsList = [];
 let pendingUserId = null;
@@ -10,20 +11,50 @@ let isJoining = false;
 let pendingRoom = '';
 let pendingRoomPassword = null;
 let pendingImageFile = null;
+let replyToMessage = null;
+
+// ========== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ ЗАПРОСОВ С ТОКЕНОМ ==========
+async function apiRequest(url, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    
+    var token = localStorage.getItem('chat_token');
+    if (token) {
+        options.headers['Authorization'] = 'Bearer ' + token;
+    }
+    
+    // Если body - строка (JSON), устанавливаем Content-Type
+    if (options.body && typeof options.body === 'string' && !options.headers['Content-Type']) {
+        options.headers['Content-Type'] = 'application/json';
+    }
+    
+    var response = await fetch(url, options);
+    
+    // Обработка истёкшей сессии
+    if (response.status === 401) {
+        handleAuthError();
+        throw new Error('Session expired');
+    }
+    
+    return response;
+}
+
+// Обработка ошибки авторизации
+function handleAuthError() {
+    alert('Сессия истекла. Пожалуйста, войдите снова.');
+    logout();
+}
 
 // ========== ЧАСОВОЙ ПОЯС ==========
 function convertToLocalTime(serverTimeStr) {
     if (!serverTimeStr) return '--:--';
     
-    // Получаем текущее время сервера (UTC)
     var now = new Date();
     var serverHours = parseInt(serverTimeStr.split(':')[0]);
     var serverMinutes = parseInt(serverTimeStr.split(':')[1]);
     
-    // Создаём дату с серверным временем в UTC
     var serverDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), serverHours, serverMinutes));
     
-    // Конвертируем в локальное время
     var localHours = serverDate.getHours().toString().padStart(2, '0');
     var localMinutes = serverDate.getMinutes().toString().padStart(2, '0');
     
@@ -94,7 +125,9 @@ async function doRegister() {
         if (data.success) {
             localStorage.setItem('chat_token', data.token);
             localStorage.setItem('chat_username', data.username);
+            localStorage.setItem('chat_user_id', data.user_id);
             currentUser = data.username;
+            currentUserId = data.user_id;
             showMessage('registerMessage', 'Регистрация успешна!', false);
             setTimeout(function() {
                 document.getElementById('authContainer').style.display = 'none';
@@ -132,8 +165,10 @@ async function doLogin() {
         
         if (data.success) {
             currentUser = data.username;
+            currentUserId = data.user_id;
             localStorage.setItem('chat_token', data.token);
             localStorage.setItem('chat_username', currentUser);
+            localStorage.setItem('chat_user_id', data.user_id);
             document.getElementById('authContainer').style.display = 'none';
             document.getElementById('roomsContainer').style.display = 'block';
             document.getElementById('userNameDisplay').innerHTML = currentUser;
@@ -177,7 +212,7 @@ function calculateAge(birthDate) {
 
 async function loadUserProfile() {
     try {
-        var response = await fetch('/api/user/profile?username=' + encodeURIComponent(currentUser));
+        var response = await apiRequest('/api/user/profile?username=' + encodeURIComponent(currentUser));
         var data = await response.json();
         if (data.success) {
             document.getElementById('profileUsername').innerHTML = data.username;
@@ -213,10 +248,10 @@ async function saveProfile() {
     var displayName = document.getElementById('editDisplayName').value.trim();
     var birthDate = document.getElementById('editBirthDate').value;
     try {
-        var response = await fetch('/api/user/update_profile', {
+        // Убран username — сервер берёт из токена
+        var response = await apiRequest('/api/user/update_profile', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser, display_name: displayName, birth_date: birthDate })
+            body: JSON.stringify({ display_name: displayName, birth_date: birthDate })
         });
         var data = await response.json();
         if (data.success) {
@@ -235,9 +270,9 @@ async function saveProfile() {
 async function uploadAvatar(file) {
     var formData = new FormData();
     formData.append('avatar', file);
-    formData.append('username', currentUser);
+    // Убран username — сервер берёт из токена
     try {
-        var response = await fetch('/api/user/upload_avatar', { method: 'POST', body: formData });
+        var response = await apiRequest('/api/user/upload_avatar', { method: 'POST', body: formData });
         var data = await response.json();
         if (data.success) {
             updateAvatarDisplay(data.avatar_url + '?t=' + Date.now());
@@ -280,7 +315,7 @@ if (avatarInput) {
 // ========== КОМНАТЫ ==========
 async function loadRooms() {
     try {
-        var response = await fetch('/api/rooms');
+        var response = await apiRequest('/api/rooms');
         var data = await response.json();
         roomsList = data.success ? data.rooms : [];
         renderRooms();
@@ -342,10 +377,10 @@ async function createNewRoom() {
         return;
     }
     try {
-        var response = await fetch('/api/create_room', {
+        // Убран creator — сервер берёт из токена
+        var response = await apiRequest('/api/create_room', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, password: password, creator: currentUser })
+            body: JSON.stringify({ name: name, password: password })
         });
         var data = await response.json();
         if (data.success) {
@@ -387,9 +422,8 @@ async function joinSelectedRoom() {
     
     isJoining = true;
     try {
-        var response = await fetch('/api/join_room', {
+        var response = await apiRequest('/api/join_room', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ room: pendingRoom, password: password })
         });
         var data = await response.json();
@@ -428,10 +462,18 @@ function leaveToRooms() {
     loadRooms();
 }
 
+function cancelReply() {
+    replyToMessage = null;
+    var replyIndicator = document.getElementById('replyIndicator');
+    if (replyIndicator) {
+        replyIndicator.style.display = 'none';
+    }
+}
+
 // ========== ПРИГЛАШЕНИЯ ==========
 async function updateRoomInfo() {
     try {
-        var response = await fetch('/api/rooms/' + currentRoom + '/info');
+        var response = await apiRequest('/api/rooms/' + currentRoom + '/info');
         var data = await response.json();
         if (data.success) {
             currentRoomId = data.room.id;
@@ -466,7 +508,7 @@ function copyInviteLink() {
 // ========== НАСТРОЙКИ КОМНАТЫ ==========
 async function showRoomSettings() {
     try {
-        var response = await fetch('/api/rooms/' + currentRoom + '/info');
+        var response = await apiRequest('/api/rooms/' + currentRoom + '/info');
         var data = await response.json();
         if (data.success) {
             document.getElementById('settingsRoomName').textContent = data.room.name;
@@ -491,7 +533,7 @@ function closeRoomSettings() {
 
 async function loadRoomMembers() {
     try {
-        var response = await fetch('/api/rooms/' + currentRoom + '/members');
+        var response = await apiRequest('/api/rooms/' + currentRoom + '/members');
         var data = await response.json();
         var container = document.getElementById('roomMembersList');
         if (container && data.success) {
@@ -519,10 +561,10 @@ async function renameRoom() {
         return;
     }
     try {
-        var response = await fetch('/api/rooms/rename', {
+        // Убран username — сервер берёт из токена
+        var response = await apiRequest('/api/rooms/rename', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ old_name: currentRoom, new_name: newName, username: currentUser })
+            body: JSON.stringify({ old_name: currentRoom, new_name: newName })
         });
         var data = await response.json();
         if (data.success) {
@@ -543,10 +585,10 @@ async function renameRoom() {
 async function kickUser(username) {
     if (!confirm('Выгнать ' + username + '?')) return;
     try {
-        var response = await fetch('/api/rooms/kick', {
+        // Убран admin — сервер берёт из токена
+        var response = await apiRequest('/api/rooms/kick', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room_name: currentRoom, username: username, admin: currentUser })
+            body: JSON.stringify({ room_name: currentRoom, username: username })
         });
         var data = await response.json();
         if (data.success) {
@@ -574,7 +616,8 @@ function closeConfirmDelete() {
 async function deleteRoom() {
     closeConfirmDelete();
     try {
-        var response = await fetch('/api/rooms/delete/' + currentRoom + '?username=' + encodeURIComponent(currentUser), { method: 'DELETE' });
+        // Убран ?username= из URL — сервер берёт из токена
+        var response = await apiRequest('/api/rooms/delete/' + currentRoom, { method: 'DELETE' });
         var data = await response.json();
         if (data.success) {
             alert('Комната "' + currentRoom + '" удалена');
@@ -592,7 +635,51 @@ async function deleteRoom() {
     }
 }
 
-// ========== ПРЕДПРОСМОТР ИЗОБРАЖЕНИЙ ==========
+// ========== ОТПРАВКА ФАЙЛОВ ==========
+
+async function uploadFile(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        var response = await apiRequest('/upload', { method: 'POST', body: formData });
+        var data = await response.json();
+        
+        if (data.url) {
+            var fileType = 'file';
+            if (file.type.startsWith('image/')) {
+                fileType = 'image';
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                var messageData = {
+                    type: fileType,
+                    url: data.url,
+                    caption: ''
+                };
+                
+                if (fileType === 'file') {
+                    messageData.filename = data.filename || file.name;
+                    messageData.size = data.size || file.size;
+                }
+                
+                ws.send(JSON.stringify(messageData));
+                console.log('Файл отправлен:', data.url);
+                return true;
+            } else {
+                console.error('WebSocket не подключен');
+                alert('Нет соединения с чатом');
+                return false;
+            }
+        }
+        return false;
+    } catch(e) {
+        console.error('Ошибка загрузки файла:', e);
+        alert('Ошибка загрузки файла: ' + e.message);
+        return false;
+    }
+}
+
 function showImagePreview(file) {
     var modal = document.getElementById('imagePreviewModal');
     if (!modal) {
@@ -607,6 +694,7 @@ function showImagePreview(file) {
             '<button onclick="closeImagePreview()" class="btn btn-secondary">Отмена</button></div></div>';
         document.body.appendChild(modal);
     }
+    
     var reader = new FileReader();
     reader.onload = function(e) {
         document.getElementById('previewImage').src = e.target.result;
@@ -626,28 +714,69 @@ function closeImagePreview() {
 }
 
 async function sendImageFromPreview() {
-    if (!pendingImageFile) return;
+    if (!pendingImageFile) {
+        console.log('Нет файла для отправки');
+        return;
+    }
+    
     var caption = document.getElementById('previewCaption').value.trim();
     closeImagePreview();
+    
     var formData = new FormData();
     formData.append('file', pendingImageFile);
+    
     try {
-        var response = await fetch('/upload', { method: 'POST', body: formData });
+        console.log('Загрузка изображения на сервер...');
+        var response = await apiRequest('/upload', { method: 'POST', body: formData });
         var data = await response.json();
-        if (data.url && ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'image', url: data.url, caption: caption }));
+        
+        if (data.url) {
+            console.log('Изображение загружено, URL:', data.url);
+            
+            if (!ws) {
+                console.error('WebSocket не инициализирован');
+                alert('Нет соединения с чатом');
+                pendingImageFile = null;
+                return;
+            }
+            
+            if (ws.readyState !== WebSocket.OPEN) {
+                console.error('WebSocket не открыт. Состояние:', ws.readyState);
+                alert('Соединение с чатом потеряно. Перезагрузите страницу.');
+                pendingImageFile = null;
+                return;
+            }
+            
+            var messageData = {
+                type: 'image',
+                url: data.url,
+                caption: caption
+            };
+            
+            if (replyToMessage) {
+                messageData.reply_to = replyToMessage;
+                cancelReply();
+            }
+            
+            ws.send(JSON.stringify(messageData));
+            console.log('Сообщение с изображением отправлено');
+        } else {
+            alert('Ошибка загрузки изображения');
         }
     } catch(e) {
-        console.error(e);
-        alert('Ошибка загрузки');
+        console.error('Ошибка:', e);
+        alert('Ошибка загрузки изображения: ' + e.message);
     }
+    
     pendingImageFile = null;
 }
 
 // ========== ВЕБ-СОКЕТ ==========
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = protocol + '//' + window.location.host + '/ws/' + currentRoom + '/' + currentUser + '/ws_' + Date.now();
+    // Используем user_id из localStorage для валидации сессии на сервере
+    var userId = localStorage.getItem('chat_user_id') || '0';
+    var wsUrl = protocol + '//' + window.location.host + '/ws/' + currentRoom + '/' + currentUser + '/' + userId;
     ws = new WebSocket(wsUrl);
     
     ws.onopen = function() {
@@ -697,6 +826,36 @@ function connectWebSocket() {
                 (data.caption ? '<div class="image-caption">' + escapeHtml(data.caption) + '</div>' : '');
             messagesDiv.appendChild(imgDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        } else if (data.type === 'file') {
+            var isOwn = data.username === currentUser;
+            var localTime = convertToLocalTime(data.timestamp);
+            var fileDiv = document.createElement('div');
+            fileDiv.className = 'chat-message ' + (isOwn ? 'own' : 'other');
+            
+            var fileIcon = '📄';
+            if (data.filename && data.filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                fileIcon = '🖼️';
+            } else if (data.filename && data.filename.match(/\.(pdf)$/i)) {
+                fileIcon = '📑';
+            } else if (data.filename && data.filename.match(/\.(mp4|webm|mov)$/i)) {
+                fileIcon = '🎬';
+            } else if (data.filename && data.filename.match(/\.(mp3|wav|ogg)$/i)) {
+                fileIcon = '🎵';
+            } else if (data.filename && data.filename.match(/\.(zip|rar|7z)$/i)) {
+                fileIcon = '📦';
+            }
+            
+            fileDiv.innerHTML = '<div class="chat-message-header">' +
+                '<span style="color: ' + (isOwn ? '#4aac4a' : '#ff8c42') + '">' + escapeHtml(data.username) + '</span>' +
+                '<span>' + localTime + '</span></div>' +
+                '<div class="chat-file" onclick="window.open(\'' + data.url + '\', \'_blank\')">' +
+                '<i class="fas fa-file"></i> ' +
+                '<div class="chat-file-info">' +
+                '<div class="chat-file-name">' + fileIcon + ' ' + escapeHtml(data.filename || 'Файл') + '</div>' +
+                '<div class="chat-file-size">' + (data.size ? Math.round(data.size / 1024) + ' KB' : '') + '</div>' +
+                '</div></div>';
+            messagesDiv.appendChild(fileDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         } else if (data.type === 'system') {
             var sysDiv = document.createElement('div');
             sysDiv.className = 'system-message';
@@ -708,11 +867,22 @@ function connectWebSocket() {
         } else if (data.type === 'kicked' || data.type === 'room_deleted') {
             alert(data.message);
             leaveToRooms();
+        } else if (data.type === 'error') {
+            console.error('WebSocket error:', data.message);
         }
     };
     
-    ws.onerror = function() { console.error('WebSocket ошибка'); };
-    ws.onclose = function() { console.log('WebSocket отключен'); };
+    ws.onerror = function(error) {
+        console.error('WebSocket ошибка:', error);
+    };
+    
+    ws.onclose = function(event) {
+        console.log('WebSocket отключен, код:', event.code, 'причина:', event.reason);
+        // Если закрытие из-за истёкшей сессии — редирект на логин
+        if (event.code === 4003) {
+            handleAuthError();
+        }
+    };
 }
 
 function sendChatMessage() {
@@ -756,21 +926,36 @@ function mentionUser(username) {
 }
 function startPrivateChat(username) { alert('Личный чат с ' + username + ' (в разработке)'); }
 
+// Обработка вставки из буфера обмена
 var chatInputElement = document.getElementById('chatInput');
 if (chatInputElement) {
     chatInputElement.addEventListener('paste', function(e) {
-        var item = e.clipboardData.items[0];
-        if (item && item.type.indexOf('image') !== -1) {
-            e.preventDefault();
-            showImagePreview(item.getAsFile());
+        var items = e.clipboardData.items;
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault();
+                var file = item.getAsFile();
+                showImagePreview(file);
+                break;
+            }
         }
     });
 }
 
+// Обработка выбора файла через кнопку
 var fileInputElement = document.getElementById('fileInput');
 if (fileInputElement) {
     fileInputElement.addEventListener('change', function(e) {
-        if (e.target.files.length) showImagePreview(e.target.files[0]);
+        var files = e.target.files;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (file.type.startsWith('image/')) {
+                showImagePreview(file);
+            } else {
+                uploadFile(file);
+            }
+        }
         e.target.value = '';
     });
 }
@@ -805,15 +990,23 @@ function playNotificationSound() {
 }
 
 function logout() {
-    localStorage.clear();
+    // Полная очистка сессии
+    localStorage.removeItem('chat_token');
+    localStorage.removeItem('chat_username');
+    localStorage.removeItem('chat_user_id');
+    localStorage.removeItem('current_room');
+    localStorage.removeItem('current_room_password');
     location.reload();
 }
 
 // ========== ВОССТАНОВЛЕНИЕ СЕССИИ И КОМНАТЫ ==========
 var savedToken = localStorage.getItem('chat_token');
 var savedUser = localStorage.getItem('chat_username');
-if (savedToken && savedUser) {
+var savedUserId = localStorage.getItem('chat_user_id');
+
+if (savedToken && savedUser && savedUserId) {
     currentUser = savedUser;
+    currentUserId = savedUserId;
     document.getElementById('authContainer').style.display = 'none';
     document.getElementById('roomsContainer').style.display = 'block';
     document.getElementById('userNameDisplay').innerHTML = currentUser;
