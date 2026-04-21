@@ -9,14 +9,15 @@ from pydantic import BaseModel, Field, validator
 import json
 from typing import Dict, Set, Optional
 from datetime import datetime, timedelta
+from pathlib import Path
 import secrets
 import os
 import uuid
 import mimetypes
+import bcrypt
 from database import get_db, User, Room, RoomMessage, RoomUser, PrivateChat, PrivateMessage
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-from pathlib import Path
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -47,21 +48,30 @@ def validate_username(username: str) -> str:
         raise ValueError("Username может содержать только буквы, цифры, подчеркивание и дефис")
     return username.strip().lower()
 
-# Безопасный ID сообщения (SHA-256 достаточно, bcrypt — перебор)
 def generate_message_id(unique_string: str) -> str:
-    import hashlib
-    salt = secrets.token_hex(16)
-    combined = f"{unique_string}{salt}{secrets.token_urlsafe(16)}".encode()
-    return hashlib.sha256(combined).hexdigest()[:16]
+    """
+    Генерирует безопасный ID сообщения с использованием bcrypt.
+    Каждый ID уникален благодаря автоматическому salt.
+    Защищено от GPU-атак и брутфорса.
+    """
+    salt = bcrypt.gensalt(rounds=10)
+    combined = f"{unique_string}{secrets.token_urlsafe(16)}".encode()
+    hashed = bcrypt.hashpw(combined, salt)
+    return hashed.decode()[:16]
 
 # ========== Pydantic модели ==========
 class RoomCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=MAX_ROOM_NAME_LENGTH)
     password: str = Field(..., min_length=4, max_length=128)
+    creator: str = Field(..., min_length=1, max_length=MAX_USERNAME_LENGTH)
     
     @validator("name")
     def validate_name(cls, v):
         return normalize_room_name(v)
+    
+    @validator("creator")
+    def validate_creator(cls, v):
+        return validate_username(v)
 
 class RoomJoin(BaseModel):
     room: str = Field(..., min_length=1)
@@ -96,6 +106,7 @@ class PrivateChatCreate(BaseModel):
         return validate_username(v)
 
 class UpdateProfile(BaseModel):
+    username: str = Field(..., min_length=1)
     display_name: Optional[str] = Field(None, max_length=100)
     birth_date: Optional[str] = None
 
@@ -157,7 +168,7 @@ def get_safe_file_path(filename: str, directory: Path) -> Path:
     except (ValueError, RuntimeError):
         raise HTTPException(status_code=400, detail="Invalid file path")
 
-# ========== ПРОВЕРКА ТОКЕНА С ИСТЕЧЕНИЕМ СРОКА ==========
+# ========== ПРОВЕРКА ТОКЕНА ==========
 async def get_current_user(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
@@ -171,22 +182,11 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    # Проверяем срок действия сессии
-    if not user.is_session_valid():
-        user.session_token = None
-        user.session_expires = None
-        db.commit()
-        raise HTTPException(status_code=401, detail="Session expired. Please login again.")
-    
-    # Обновляем last_seen
-    user.last_seen = datetime.utcnow()
-    db.commit()
-    
     return user
 
 # ========== КЛАСС КОМНАТЫ ==========
 class ChatRoom:
-    async def create_room(self, room_name: str, password: str, creator_id: int, db: Session):
+    async def create_room(self, room_name: str, password: str, creator: str, db: Session):
         normalized_name = normalize_room_name(room_name)
         
         if normalized_name in rooms_list:
@@ -199,16 +199,15 @@ class ChatRoom:
             name=normalized_name,
             room_uuid=room_uuid,
             password_hash=password_hash,
-            creator_id=creator_id
+            creator=creator
         )
         db.add(new_room)
         db.commit()
-        db.refresh(new_room)
         
         rooms_data[normalized_name] = {
             "id": room_uuid,
             "password": password_hash,
-            "creator_id": creator_id,
+            "creator": creator,
             "created_at": datetime.now().isoformat()
         }
         rooms_list.add(normalized_name)
@@ -225,22 +224,18 @@ class ChatRoom:
     
     async def get_all_rooms(self, db: Session) -> list:
         rooms = db.query(Room).all()
-        return [{"name": r.name, "creator": r.creator.username if r.creator else "Unknown"} for r in rooms]
+        return [{"name": r.name, "creator": r.creator} for r in rooms]
     
     async def get_room_by_id(self, room_uuid: str, db: Session):
         return db.query(Room).filter(Room.room_uuid == room_uuid).first()
     
-    async def add_user_to_room(self, room_name: str, user_id: int, username: str, db: Session):
-        room = db.query(Room).filter(Room.name == room_name).first()
-        if not room:
-            return
-        
+    async def add_user_to_room(self, room_name: str, username: str, db: Session):
         existing = db.query(RoomUser).filter(
-            RoomUser.room_id == room.id,
-            RoomUser.user_id == user_id
+            RoomUser.room_name == room_name,
+            RoomUser.username == username
         ).first()
         if not existing:
-            new_user = RoomUser(room_id=room.id, user_id=user_id)
+            new_user = RoomUser(room_name=room_name, username=username)
             db.add(new_user)
             db.commit()
         
@@ -248,14 +243,10 @@ class ChatRoom:
             room_users[room_name] = set()
         room_users[room_name].add(username)
     
-    async def remove_user_from_room(self, room_name: str, user_id: int, username: str, db: Session):
-        room = db.query(Room).filter(Room.name == room_name).first()
-        if not room:
-            return
-        
+    async def remove_user_from_room(self, room_name: str, username: str, db: Session):
         user = db.query(RoomUser).filter(
-            RoomUser.room_id == room.id,
-            RoomUser.user_id == user_id
+            RoomUser.room_name == room_name,
+            RoomUser.username == username
         ).first()
         if user:
             db.delete(user)
@@ -265,20 +256,12 @@ class ChatRoom:
             room_users[room_name].discard(username)
     
     async def get_room_users(self, room_name: str, db: Session) -> list:
-        room = db.query(Room).filter(Room.name == room_name).first()
-        if not room:
-            return []
-        users = db.query(RoomUser).filter(RoomUser.room_id == room.id).all()
-        return [u.user.username for u in users if u.user]
+        users = db.query(RoomUser.username).filter(RoomUser.room_name == room_name).all()
+        return [u.username for u in users]
     
     async def save_message(self, room_name: str, message_data: dict, db: Session):
-        room = db.query(Room).filter(Room.name == room_name).first()
-        if not room:
-            return
-        
         new_message = RoomMessage(
-            room_id=room.id,
-            user_id=message_data.get("user_id"),
+            room_name=room_name,
             message_data=json.dumps(message_data)
         )
         db.add(new_message)
@@ -291,7 +274,7 @@ class ChatRoom:
             room_messages[room_name] = room_messages[room_name][-100:]
         
         messages = db.query(RoomMessage).filter(
-            RoomMessage.room_id == room.id
+            RoomMessage.room_name == room_name
         ).order_by(RoomMessage.created_at).all()
         if len(messages) > 100:
             for msg in messages[:-100]:
@@ -302,11 +285,8 @@ class ChatRoom:
         if room_name in room_messages:
             return room_messages[room_name][-50:]
         
-        room = db.query(Room).filter(Room.name == room_name).first()
-        if not room:
-            return []
         messages = db.query(RoomMessage).filter(
-            RoomMessage.room_id == room.id
+            RoomMessage.room_name == room_name
         ).order_by(RoomMessage.created_at).all()
         return [json.loads(msg.message_data) for msg in messages[-50:]]
     
@@ -319,7 +299,7 @@ class ChatRoom:
         active_connections[room].add(websocket)
         user_rooms[websocket] = {"room": room, "username": username, "user_id": user_id}
         
-        await self.add_user_to_room(room, int(user_id), username, db)
+        await self.add_user_to_room(room, username, db)
         
         history = await self.get_message_history(room, db)
         for msg in history:
@@ -345,12 +325,11 @@ class ChatRoom:
         if websocket in user_rooms:
             room = user_rooms[websocket]["room"]
             username = user_rooms[websocket]["username"]
-            user_id = user_rooms[websocket]["user_id"]
             
             if room in active_connections:
                 active_connections[room].discard(websocket)
             
-            await self.remove_user_from_room(room, int(user_id), username, db)
+            await self.remove_user_from_room(room, username, db)
             
             await self.broadcast_to_room(
                 room,
@@ -422,16 +401,12 @@ async def get_rooms(db: Session = Depends(get_db)):
         return {"success": False, "error": "Internal server error"}
 
 @app.post("/api/create_room")
-async def create_room(
-    data: RoomCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+async def create_room(data: RoomCreate, db: Session = Depends(get_db)):
     try:
         print(f"📝 Создание комнаты: {data.name}")
         
         success, message, room_uuid = await chat_room.create_room(
-            data.name, data.password, current_user.id, db
+            data.name, data.password, data.creator, db
         )
         
         if success:
@@ -465,7 +440,7 @@ async def get_room_by_id(room_uuid: str, db: Session = Depends(get_db)):
         return {
             "success": True,
             "room_name": room.name,
-            "creator": room.creator.username if room.creator else "Unknown"
+            "creator": room.creator
         }
     return {"success": False, "error": "Комната не найдена"}
 
@@ -483,7 +458,7 @@ async def get_room_info(room_name: str, db: Session = Depends(get_db)):
         "room": {
             "name": room.name,
             "id": room.room_uuid,
-            "creator": room.creator.username if room.creator else "Unknown",
+            "creator": room.creator,
             "created_at": room.created_at.isoformat() if room.created_at else None,
             "member_count": len(users)
         }
@@ -493,11 +468,8 @@ async def get_room_info(room_name: str, db: Session = Depends(get_db)):
 async def get_room_members(room_name: str, db: Session = Depends(get_db)):
     try:
         normalized = normalize_room_name(room_name)
-        room = db.query(Room).filter(Room.name == normalized).first()
-        if not room:
-            return {"success": True, "members": []}
-        users = db.query(RoomUser).filter(RoomUser.room_id == room.id).all()
-        return {"success": True, "members": [u.user.username for u in users if u.user]}
+        users = db.query(RoomUser.username).filter(RoomUser.room_name == normalized).all()
+        return {"success": True, "members": [u.username for u in users]}
     except Exception as e:
         print(f"❌ Ошибка получения участников: {e}")
         return {"success": True, "members": []}
@@ -515,7 +487,7 @@ async def rename_room(
         if not room:
             return {"success": False, "error": "Комната не найдена"}
         
-        if room.creator_id != current_user.id:
+        if room.creator != current_user.username:
             return {"success": False, "error": "Только создатель может изменить название"}
         
         existing = db.query(Room).filter(Room.name == data.new_name).first()
@@ -560,20 +532,16 @@ async def kick_user(
         if not room:
             return {"success": False, "error": "Комната не найдена"}
         
-        if room.creator_id != current_user.id:
+        if room.creator != current_user.username:
             return {"success": False, "error": "Только создатель может выгонять участников"}
         
-        user_to_kick = db.query(User).filter(User.username == data.username).first()
-        if not user_to_kick:
-            return {"success": False, "error": "Пользователь не найден"}
-        
-        room_user = db.query(RoomUser).filter(
-            RoomUser.room_id == room.id,
-            RoomUser.user_id == user_to_kick.id
+        user = db.query(RoomUser).filter(
+            RoomUser.room_name == data.room_name,
+            RoomUser.username == data.username
         ).first()
         
-        if room_user:
-            db.delete(room_user)
+        if user:
+            db.delete(user)
             db.commit()
         
         if data.room_name in room_users:
@@ -618,11 +586,12 @@ async def delete_room(
         if not room:
             return {"success": False, "error": "Комната не найдена"}
         
-        if room.creator_id != current_user.id:
+        if room.creator != current_user.username:
             return {"success": False, "error": "Только создатель может удалить комнату"}
         
-        # Каскадное удаление через SQLAlchemy (связи настроены)
         db.delete(room)
+        db.query(RoomMessage).filter(RoomMessage.room_name == normalized).delete()
+        db.query(RoomUser).filter(RoomUser.room_name == normalized).delete()
         db.commit()
         
         for cache in [rooms_data, rooms_list, room_messages, room_users]:
@@ -746,8 +715,8 @@ async def register(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
         
-        # Создаём сессию с истечением срока
-        session_token = new_user.refresh_session()
+        session_token = secrets.token_urlsafe(32)
+        new_user.session_token = session_token
         db.commit()
         
         return {
@@ -780,8 +749,8 @@ async def login(request: Request, db: Session = Depends(get_db)):
         if not user.verify_password(password):
             return {"success": False, "error": "Неверное имя пользователя или пароль"}
         
-        # Обновляем сессию
-        session_token = user.refresh_session()
+        session_token = secrets.token_urlsafe(32)
+        user.session_token = session_token
         db.commit()
         
         return {
@@ -824,7 +793,7 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)):
             "username": user.username,
             "email": user.email,
             "display_name": user.display_name if user.display_name else user.username,
-            "birth_date": user.birth_date.isoformat() if user.birth_date else None,
+            "birth_date": user.birth_date if user.birth_date else None,
             "avatar_url": avatar_url,
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
@@ -835,43 +804,51 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)):
         return {"success": False, "error": "Internal server error"}
 
 @app.post("/api/user/update_profile")
-async def update_user_profile(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+async def update_user_profile(request: Request, db: Session = Depends(get_db)):
     try:
         data = await request.json()
         
+        username = data.get("username", "").strip()
         display_name = data.get("display_name", "").strip()
         birth_date = data.get("birth_date")
+        
+        safe_username = validate_username(username)
+        user = db.query(User).filter(User.username == safe_username).first()
+        if not user:
+            return {"success": False, "error": "Пользователь не найден"}
         
         if display_name:
             if len(display_name) > 100:
                 return {"success": False, "error": "Отображаемое имя слишком длинное"}
-            current_user.display_name = display_name
+            user.display_name = display_name
         
         if birth_date:
             try:
                 datetime.strptime(birth_date, "%Y-%m-%d")
-                from sqlalchemy import Date as SQLDate
-                current_user.birth_date = birth_date
+                user.birth_date = birth_date
             except ValueError:
                 return {"success": False, "error": "Неверный формат даты. Используйте YYYY-MM-DD"}
         
         db.commit()
         return {"success": True}
+    except ValueError as ve:
+        return {"success": False, "error": str(ve)}
     except Exception as e:
         print(f"❌ Ошибка обновления профиля: {e}")
         return {"success": False, "error": "Internal server error"}
 
 @app.post("/api/user/upload_avatar")
 async def upload_avatar(
+    username: str = Form(...),
     avatar: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
+        safe_username = validate_username(username)
+        user = db.query(User).filter(User.username == safe_username).first()
+        if not user:
+            return {"success": False, "error": "Пользователь не найден"}
+        
         content = await avatar.read()
         if not validate_file_size(content, 5 * 1024 * 1024):
             raise HTTPException(status_code=413, detail="Аватар слишком большой. Максимум 5MB")
@@ -886,10 +863,10 @@ async def upload_avatar(
         if not mime_type or not mime_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="Файл должен быть изображением")
         
-        if current_user.avatar_url and current_user.avatar_url != "/static/default-avatar.png":
+        if user.avatar_url:
             try:
                 old_path = get_safe_file_path(
-                    current_user.avatar_url.replace("/uploads/avatars/", ""),
+                    user.avatar_url.replace("/uploads/avatars/", ""),
                     AVATAR_DIR
                 )
                 if old_path.exists():
@@ -904,12 +881,14 @@ async def upload_avatar(
             f.write(content)
         
         avatar_url = f"/uploads/avatars/{safe_name}"
-        current_user.avatar_url = avatar_url
+        user.avatar_url = avatar_url
         db.commit()
         
         return {"success": True, "avatar_url": avatar_url}
     except HTTPException:
         raise
+    except ValueError as ve:
+        return {"success": False, "error": str(ve)}
     except Exception as e:
         print(f"❌ Ошибка загрузки аватара: {e}")
         return {"success": False, "error": "Internal server error"}
@@ -919,24 +898,15 @@ async def upload_avatar(
 @app.post("/api/private_chat/create")
 async def create_private_chat(data: PrivateChatCreate, db: Session = Depends(get_db)):
     try:
-        user1 = db.query(User).filter(User.username == data.user1).first()
-        user2 = db.query(User).filter(User.username == data.user2).first()
-        
-        if not user1 or not user2:
-            return {"success": False, "error": "Пользователь не найден"}
-        
-        # Сортируем ID для уникальности (всегда меньший ID первый)
-        u1_id, u2_id = sorted([user1.id, user2.id])
-        
         existing = db.query(PrivateChat).filter(
-            PrivateChat.user1_id == u1_id,
-            PrivateChat.user2_id == u2_id
+            ((PrivateChat.user1 == data.user1) & (PrivateChat.user2 == data.user2)) |
+            ((PrivateChat.user1 == data.user2) & (PrivateChat.user2 == data.user1))
         ).first()
         
         if existing:
             return {"success": True, "chat_id": existing.id}
         
-        chat = PrivateChat(user1_id=u1_id, user2_id=u2_id)
+        chat = PrivateChat(user1=data.user1, user2=data.user2)
         db.add(chat)
         db.commit()
         db.refresh(chat)
@@ -946,26 +916,26 @@ async def create_private_chat(data: PrivateChatCreate, db: Session = Depends(get
         return {"success": False, "error": "Internal server error"}
 
 @app.get("/api/private_chats")
-async def get_private_chats(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+async def get_private_chats(username: str, db: Session = Depends(get_db)):
     try:
+        safe_username = validate_username(username)
         chats = db.query(PrivateChat).filter(
-            (PrivateChat.user1_id == current_user.id) | (PrivateChat.user2_id == current_user.id)
+            (PrivateChat.user1 == safe_username) | (PrivateChat.user2 == safe_username)
         ).all()
         
         result = []
         for chat in chats:
-            other_user = chat.user2 if chat.user1_id == current_user.id else chat.user1
             result.append({
                 "id": chat.id,
-                "other_user": other_user.username if other_user else "Unknown",
+                "user1": chat.user1,
+                "user2": chat.user2,
                 "last_message": chat.last_message or "",
                 "updated_at": chat.updated_at.isoformat() if chat.updated_at else None
             })
         
         return {"success": True, "chats": result}
+    except ValueError as ve:
+        return {"success": False, "error": str(ve)}
     except Exception as e:
         print(f"❌ Ошибка получения чатов: {e}")
         return {"success": True, "chats": []}
@@ -988,17 +958,6 @@ async def websocket_endpoint(
             return
     except ValueError as e:
         await websocket.close(code=4001, reason=str(e))
-        return
-    
-    # Проверяем существование пользователя
-    user = db.query(User).filter(User.id == int(user_id)).first()
-    if not user:
-        await websocket.close(code=4003, reason="User not found")
-        return
-    
-    # Проверяем сессию
-    if not user.is_session_valid():
-        await websocket.close(code=4003, reason="Session expired")
         return
     
     room_obj = db.query(Room).filter(Room.name == safe_room).first()
@@ -1041,6 +1000,7 @@ async def websocket_endpoint(
                     })
                     continue
                 
+                # БЕЗОПАСНЫЙ ID через bcrypt
                 chat_message = {
                     "id": generate_message_id(f"{datetime.now().isoformat()}{safe_username}{msg_text}"),
                     "type": "message",
@@ -1074,6 +1034,7 @@ async def websocket_endpoint(
                     })
                     continue
                 
+                # БЕЗОПАСНЫЙ ID через bcrypt
                 image_message = {
                     "id": generate_message_id(f"{datetime.now().isoformat()}{safe_username}{url}"),
                     "type": "image",

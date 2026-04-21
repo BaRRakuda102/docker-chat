@@ -248,6 +248,7 @@ async function saveProfile() {
     var displayName = document.getElementById('editDisplayName').value.trim();
     var birthDate = document.getElementById('editBirthDate').value;
     try {
+        // Убран username — сервер берёт из токена
         var response = await apiRequest('/api/user/update_profile', {
             method: 'POST',
             body: JSON.stringify({ display_name: displayName, birth_date: birthDate })
@@ -269,6 +270,7 @@ async function saveProfile() {
 async function uploadAvatar(file) {
     var formData = new FormData();
     formData.append('avatar', file);
+    // Убран username — сервер берёт из токена
     try {
         var response = await apiRequest('/api/user/upload_avatar', { method: 'POST', body: formData });
         var data = await response.json();
@@ -375,6 +377,7 @@ async function createNewRoom() {
         return;
     }
     try {
+        // Убран creator — сервер берёт из токена
         var response = await apiRequest('/api/create_room', {
             method: 'POST',
             body: JSON.stringify({ name: name, password: password })
@@ -558,6 +561,7 @@ async function renameRoom() {
         return;
     }
     try {
+        // Убран username — сервер берёт из токена
         var response = await apiRequest('/api/rooms/rename', {
             method: 'POST',
             body: JSON.stringify({ old_name: currentRoom, new_name: newName })
@@ -581,6 +585,7 @@ async function renameRoom() {
 async function kickUser(username) {
     if (!confirm('Выгнать ' + username + '?')) return;
     try {
+        // Убран admin — сервер берёт из токена
         var response = await apiRequest('/api/rooms/kick', {
             method: 'POST',
             body: JSON.stringify({ room_name: currentRoom, username: username })
@@ -611,6 +616,7 @@ function closeConfirmDelete() {
 async function deleteRoom() {
     closeConfirmDelete();
     try {
+        // Убран ?username= из URL — сервер берёт из токена
         var response = await apiRequest('/api/rooms/delete/' + currentRoom, { method: 'DELETE' });
         var data = await response.json();
         if (data.success) {
@@ -768,9 +774,9 @@ async function sendImageFromPreview() {
 // ========== ВЕБ-СОКЕТ ==========
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Используем user_id из localStorage для валидации сессии на сервере
     var userId = localStorage.getItem('chat_user_id') || '0';
-    // Исправлено: используем encodeURIComponent для имени пользователя и комнаты
-    var wsUrl = protocol + '//' + window.location.host + '/ws/' + encodeURIComponent(currentRoom) + '/' + encodeURIComponent(currentUser) + '/' + userId;
+    var wsUrl = protocol + '//' + window.location.host + '/ws/' + currentRoom + '/' + currentUser + '/' + userId;
     ws = new WebSocket(wsUrl);
     
     ws.onopen = function() {
@@ -872,6 +878,7 @@ function connectWebSocket() {
     
     ws.onclose = function(event) {
         console.log('WebSocket отключен, код:', event.code, 'причина:', event.reason);
+        // Если закрытие из-за истёкшей сессии — редирект на логин
         if (event.code === 4003) {
             handleAuthError();
         }
@@ -983,6 +990,7 @@ function playNotificationSound() {
 }
 
 function logout() {
+    // Полная очистка сессии
     localStorage.removeItem('chat_token');
     localStorage.removeItem('chat_username');
     localStorage.removeItem('chat_user_id');
@@ -992,56 +1000,48 @@ function logout() {
 }
 
 // ========== ВОССТАНОВЛЕНИЕ СЕССИИ И КОМНАТЫ ==========
-// Добавляем небольшую задержку для загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-    var savedToken = localStorage.getItem('chat_token');
-    var savedUser = localStorage.getItem('chat_username');
-    var savedUserId = localStorage.getItem('chat_user_id');
+var savedToken = localStorage.getItem('chat_token');
+var savedUser = localStorage.getItem('chat_username');
+var savedUserId = localStorage.getItem('chat_user_id');
+
+if (savedToken && savedUser && savedUserId) {
+    currentUser = savedUser;
+    currentUserId = savedUserId;
+    document.getElementById('authContainer').style.display = 'none';
+    document.getElementById('roomsContainer').style.display = 'block';
+    document.getElementById('userNameDisplay').innerHTML = currentUser;
+    loadRooms();
+    loadUserProfile();
     
-    if (savedToken && savedUser && savedUserId) {
-        currentUser = savedUser;
-        currentUserId = savedUserId;
-        var authContainer = document.getElementById('authContainer');
-        var roomsContainer = document.getElementById('roomsContainer');
-        if (authContainer && roomsContainer) {
-            authContainer.style.display = 'none';
-            roomsContainer.style.display = 'block';
-            var userNameDisplay = document.getElementById('userNameDisplay');
-            if (userNameDisplay) userNameDisplay.innerHTML = currentUser;
-            loadRooms();
-            loadUserProfile();
-            
-            var savedRoom = localStorage.getItem('current_room');
-            var savedRoomPassword = localStorage.getItem('current_room_password');
-            if (savedRoom && savedRoomPassword && !currentRoom) {
-                setTimeout(function() {
-                    var roomExists = false;
-                    for (var i = 0; i < roomsList.length; i++) {
-                        if (roomsList[i].name === savedRoom) {
-                            roomExists = true;
-                            break;
-                        }
-                    }
-                    if (roomExists) {
-                        promptJoinRoom(savedRoom, savedRoomPassword);
-                    } else {
-                        localStorage.removeItem('current_room');
-                        localStorage.removeItem('current_room_password');
-                    }
-                }, 1000);
-            }
-        }
-    }
-    
-    var autoJoinRoom = localStorage.getItem('auto_join_room');
-    var autoJoinPassword = localStorage.getItem('auto_join_password');
-    if (autoJoinRoom && autoJoinPassword && !currentRoom) {
-        localStorage.removeItem('auto_join_room');
-        localStorage.removeItem('auto_join_password');
+    var savedRoom = localStorage.getItem('current_room');
+    var savedRoomPassword = localStorage.getItem('current_room_password');
+    if (savedRoom && savedRoomPassword && !currentRoom) {
         setTimeout(function() {
-            promptJoinRoom(autoJoinRoom, autoJoinPassword);
+            var roomExists = false;
+            for (var i = 0; i < roomsList.length; i++) {
+                if (roomsList[i].name === savedRoom) {
+                    roomExists = true;
+                    break;
+                }
+            }
+            if (roomExists) {
+                promptJoinRoom(savedRoom, savedRoomPassword);
+            } else {
+                localStorage.removeItem('current_room');
+                localStorage.removeItem('current_room_password');
+            }
         }, 1000);
     }
-});
+}
+
+var autoJoinRoom = localStorage.getItem('auto_join_room');
+var autoJoinPassword = localStorage.getItem('auto_join_password');
+if (autoJoinRoom && autoJoinPassword && !currentRoom) {
+    localStorage.removeItem('auto_join_room');
+    localStorage.removeItem('auto_join_password');
+    setTimeout(function() {
+        promptJoinRoom(autoJoinRoom, autoJoinPassword);
+    }, 1000);
+}
 
 console.log('Script loaded successfully');

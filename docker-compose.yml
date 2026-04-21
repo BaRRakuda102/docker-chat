@@ -1,25 +1,28 @@
+version: '3.8'
+
 services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: chatuser
+      POSTGRES_PASSWORD: chatpass
+      POSTGRES_DB: chatdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   chat:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      - ./app:/app
     environment:
-      - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/chatdb
+      DATABASE_URL: postgresql://chatuser:chatpass@db:5432/chatdb
+      # Для локальной разработки SSL не нужен
     depends_on:
       - db
-    restart: unless-stopped
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=chatdb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./uploads:/app/uploads
 
 volumes:
   postgres_data:
