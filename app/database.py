@@ -44,7 +44,6 @@ class User(Base):
     private_chats_2 = relationship("PrivateChat", foreign_keys="PrivateChat.user2_id", back_populates="user2")
     
     def set_password(self, password: str):
-        # Используем passlib из main.py, здесь заглушка для совместимости
         from passlib.context import CryptContext
         pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.password_hash = pwd_context.hash(password)
@@ -55,21 +54,18 @@ class User(Base):
         return pwd_context.verify(password, self.password_hash)
     
     def generate_verification_code(self):
-        # Криптостойкий код вместо random.randint
         self.verification_code = str(secrets.randbelow(900000) + 100000)
         self.verification_code_expires = datetime.utcnow() + timedelta(minutes=15)
         return self.verification_code
     
     def is_session_valid(self):
-        """Проверяет, не истёк ли токен сессии"""
         if not self.session_token or not self.session_expires:
             return False
         return self.session_expires > datetime.utcnow()
     
     def refresh_session(self):
-        """Обновляет токен и время жизни сессии"""
         self.session_token = secrets.token_urlsafe(32)
-        self.session_expires = datetime.utcnow() + timedelta(days=7)  # 7 дней
+        self.session_expires = datetime.utcnow() + timedelta(days=7)
         return self.session_token
 
 class Room(Base):
@@ -96,7 +92,6 @@ class RoomMessage(Base):
     message_data = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
-    # Связи
     room = relationship("Room", back_populates="messages")
     user = relationship("User", foreign_keys=[user_id])
 
@@ -108,11 +103,9 @@ class RoomUser(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     joined_at = Column(DateTime, default=datetime.utcnow)
     
-    # Связи
     room = relationship("Room", back_populates="room_users")
     user = relationship("User", back_populates="room_users")
     
-    # Уникальность: один пользователь — одна комната
     __table_args__ = (
         UniqueConstraint('room_id', 'user_id', name='unique_room_user'),
     )
@@ -127,12 +120,10 @@ class PrivateChat(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Связи
     user1 = relationship("User", foreign_keys=[user1_id], back_populates="private_chats_1")
     user2 = relationship("User", foreign_keys=[user2_id], back_populates="private_chats_2")
     messages = relationship("PrivateMessage", back_populates="chat", cascade="all, delete-orphan")
     
-    # Уникальность: один чат на пару пользователей
     __table_args__ = (
         UniqueConstraint('user1_id', 'user2_id', name='unique_private_chat'),
     )
@@ -146,15 +137,13 @@ class PrivateMessage(Base):
     message = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
-    # Связь
     chat = relationship("PrivateChat", back_populates="messages")
 
 def upgrade_sqlite_schema():
-    """Принудительное обновление схемы SQLite (добавление недостающих колонок)"""
+    """Принудительное обновление схемы SQLite для всех таблиц"""
     if not DATABASE_URL.startswith('sqlite'):
         return
     
-    # Извлекаем путь к файлу БД
     db_path = DATABASE_URL.replace('sqlite:///', '')
     if not os.path.exists(db_path):
         return
@@ -162,17 +151,25 @@ def upgrade_sqlite_schema():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Проверяем и добавляем недостающие колонки в таблицу users
+    # Обновление таблицы users
     cursor.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in cursor.fetchall()]
+    existing_columns = [col[1] for col in cursor.fetchall()]
     
-    if 'session_token' not in columns:
+    if 'session_token' not in existing_columns:
         print("Adding session_token column to users table")
         cursor.execute("ALTER TABLE users ADD COLUMN session_token VARCHAR(64)")
     
-    if 'session_expires' not in columns:
+    if 'session_expires' not in existing_columns:
         print("Adding session_expires column to users table")
         cursor.execute("ALTER TABLE users ADD COLUMN session_expires DATETIME")
+    
+    # Обновление таблицы rooms
+    cursor.execute("PRAGMA table_info(rooms)")
+    room_columns = [col[1] for col in cursor.fetchall()]
+    
+    if 'creator_id' not in room_columns:
+        print("Adding creator_id column to rooms table")
+        cursor.execute("ALTER TABLE rooms ADD COLUMN creator_id INTEGER REFERENCES users(id)")
     
     conn.commit()
     conn.close()
@@ -180,7 +177,7 @@ def upgrade_sqlite_schema():
 # Обновляем схему перед созданием таблиц
 upgrade_sqlite_schema()
 
-# Создаём таблицы (для dev, в проде использовать Alembic)
+# Создаём таблицы (если их нет)
 Base.metadata.create_all(bind=engine)
 
 def get_db():
