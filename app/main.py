@@ -17,6 +17,7 @@ from jose import JWTError, jwt
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 import re
+from urllib.parse import unquote
 
 from database import (
     get_db, User, Room, RoomMessage, RoomUser, 
@@ -37,16 +38,21 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 # FastAPI приложение
 app = FastAPI(title="Chat Application")
 
+# СОЗДАЕМ НЕОБХОДИМЫЕ ДИРЕКТОРИИ
+os.makedirs("static", exist_ok=True)
+os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
+
 # Монтируем статические файлы
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/avatars", StaticFiles(directory="avatars"), name="avatars")
+app.mount("/avatars", StaticFiles(directory="uploads/avatars"), name="avatars")
 
 # Шаблоны
 templates = Jinja2Templates(directory="templates")
 
-# Создаем директории
+# Создаем директории для загрузок
 UPLOAD_DIR = Path("uploads")
-AVATAR_DIR = Path("avatars")
+AVATAR_DIR = Path("uploads/avatars")
 UPLOAD_DIR.mkdir(exist_ok=True)
 AVATAR_DIR.mkdir(exist_ok=True)
 
@@ -92,7 +98,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-# ========== ChatRoom класс (ПОЛНОСТЬЮ ИСПРАВЛЕН) ==========
+# ========== ChatRoom класс (ИСПРАВЛЕН) ==========
 class ChatRoom:
     def __init__(self):
         self.active_connections: Dict[str, Dict[str, WebSocket]] = {}
@@ -471,7 +477,6 @@ async def websocket_endpoint(
     user_id: int
 ):
     # Декодируем URL-encoded строки
-    from urllib.parse import unquote
     room_name = unquote(room_name)
     username = unquote(username)
     
