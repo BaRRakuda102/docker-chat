@@ -92,7 +92,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-# ========== ChatRoom класс (ИСПРАВЛЕН) ==========
+# ========== ChatRoom класс (ПОЛНОСТЬЮ ИСПРАВЛЕН) ==========
 class ChatRoom:
     def __init__(self):
         self.active_connections: Dict[str, Dict[str, WebSocket]] = {}
@@ -468,18 +468,18 @@ async def websocket_endpoint(
     websocket: WebSocket,
     room_name: str,
     username: str,
-    user_id: int,
-    db: Session = Depends(get_db)
+    user_id: int
 ):
     # Декодируем URL-encoded строки
-    room_name = room_name.encode().decode('unicode_escape')
-    username = username.encode().decode('unicode_escape')
+    from urllib.parse import unquote
+    room_name = unquote(room_name)
+    username = unquote(username)
     
     # Получаем сессию БД
-    db_session = next(get_db())
+    db = next(get_db())
     
     try:
-        await chat_room.connect(websocket, room_name, username, user_id, db_session)
+        await chat_room.connect(websocket, room_name, username, user_id, db)
         
         while True:
             try:
@@ -491,13 +491,13 @@ async def websocket_endpoint(
                         room_name, 
                         username, 
                         message_data.get("message", ""), 
-                        db_session
+                        db
                     )
             except WebSocketDisconnect:
-                await chat_room.disconnect(room_name, username, db_session)
+                await chat_room.disconnect(room_name, username, db)
                 break
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"WebSocket error: {e}")
                 continue
     finally:
-        db_session.close()
+        db.close()
