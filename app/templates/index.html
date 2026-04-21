@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>D-Chat | Secure Messenger</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%233a8c3a'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.35em' font-size='70' fill='white' font-weight='bold'%3ED%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- СТАРТОВАЯ СТРАНИЦА -->
+    <div id="authContainer" class="glass-container">
+        <div class="info-panel">
+            <div class="logo">
+                <i class="fas fa-lock"></i>
+                <h1>D-Chat</h1>
+            </div>
+            <h2>Защищённый мессенджер</h2>
+            <p>Современный, безопасный и простой мессенджер для любых целей</p>
+            <div class="features">
+                <div class="feature"><i class="fas fa-shield-alt"></i><div><h4>Сквозное шифрование</h4><p>Ваши сообщения видны только вам</p></div></div>
+                <div class="feature"><i class="fas fa-comments"></i><div><h4>Групповые чаты</h4><p>Создавайте комнаты с паролем</p></div></div>
+                <div class="feature"><i class="fas fa-image"></i><div><h4>Обмен файлами</h4><p>Отправляйте изображения</p></div></div>
+                <div class="feature"><i class="fas fa-globe"></i><div><h4>Доступен везде</h4><p>Входите с любого устройства</p></div></div>
+            </div>
+        </div>
+        
+        <div class="auth-panel">
+            <div id="loginFormContainer">
+                <h2 class="form-title">Добро пожаловать</h2>
+                <div class="input-group"><input type="text" id="loginUsername" placeholder="Имя пользователя или Email"></div>
+                <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль"></div>
+                <button onclick="doLogin()" class="btn btn-primary">Войти</button>
+                <div class="switch-text">Нет аккаунта? <span class="switch-link" onclick="showRegisterForm()">Зарегистрироваться</span></div>
+                <div id="loginMessage" class="message"></div>
+            </div>
+            
+            <div id="registerFormContainer" style="display: none;">
+                <h2 class="form-title">Создать аккаунт</h2>
+                <div class="input-group"><input type="text" id="regUsername" placeholder="Имя пользователя"></div>
+                <div class="input-group"><input type="email" id="regEmail" placeholder="Email"></div>
+                <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль"></div>
+                <div class="input-group"><input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль"></div>
+                <button onclick="doRegister()" class="btn btn-primary">Зарегистрироваться</button>
+                <div class="switch-text">Уже есть аккаунт? <span class="switch-link" onclick="showLoginForm()">Войти</span></div>
+                <div id="registerMessage" class="message"></div>
+            </div>
+            
+           <!-- <div id="verifyFormContainer" class="form-container" style="display: none;">
+                <h2 class="form-title">Подтверждение email</h2>
+                <div class="input-group"><input type="text" id="verifyCode" placeholder="6-значный код" maxlength="6"></div>
+                <button onclick="doVerify()" class="btn btn-primary">Подтвердить</button>
+                <button onclick="resendCode()" class="btn btn-secondary">Отправить повторно</button>
+                <div id="verifyMessage" class="message"></div>
+            </div> -->
+        </div>
+    </div>
+
+    <!-- СТРАНИЦА КОМНАТ -->
+    <div id="roomsContainer" style="display: none;">
+        <div class="rooms-page">
+            <div class="rooms-header">
+                <h2><i class="fas fa-comments"></i> Комнаты</h2>
+                <div class="header-buttons">
+                    <button onclick="showCreateRoomModal()" class="create-btn"><i class="fas fa-plus"></i> Создать чат</button>
+                    <div style="position: relative;">
+                        <div class="user-info" onclick="toggleProfileMenu()">
+                            <img id="userAvatarSmall" src="/static/default-avatar.png" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">
+                            <span id="userNameDisplay"></span>
+                            <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                        </div>
+                        <div class="profile-dropdown" id="profileDropdown">
+                            <div class="profile-dropdown-header">
+                                <img id="userAvatarLarge" src="/static/default-avatar.png" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px;">
+                                <h4 id="profileUsername">Username</h4>
+                                <p id="profileEmail">email@example.com</p>
+                            </div>
+                            <div class="profile-dropdown-info">
+                                <div class="info-row"><span>Имя</span><span id="displayName">-</span></div>
+                                <div class="info-row"><span>Возраст</span><span id="userAge">Не указан</span></div>
+                                <div class="info-row"><span>Регистрация</span><span id="regDate">-</span></div>
+                            </div>
+                            <div class="profile-dropdown-actions">
+                                <button class="edit-profile-btn" onclick="showEditProfileModal()"><i class="fas fa-edit"></i> Редактировать</button>
+                                <button class="logout-profile-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchRoomsInput" placeholder="Поиск комнат по названию..." onkeyup="filterRooms()">
+            </div>
+            
+            <div id="roomsList" class="rooms-grid"></div>
+        </div>
+    </div>
+
+    <!-- ЧАТ -->
+    <div id="chatContainer" style="display: none;">
+        <div class="chat-app">
+            <div class="chat-sidebar">
+                <div style="padding: 20px; border-bottom: 1px solid rgba(74,172,74,0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img id="chatUserAvatar" src="/static/default-avatar.png" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                            <span id="chatCurrentUser" style="color: white;"></span>
+                        </div>
+                        <button onclick="logout()" style="background: rgba(139,58,58,0.5); border: none; padding: 8px 16px; border-radius: 12px; color: white; cursor: pointer;">Выйти</button>
+                    </div>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="background: rgba(74,172,74,0.15); border-radius: 16px; padding: 15px;">
+                        <div style="color: rgba(255,255,255,0.6); font-size: 11px;">Текущий чат</div>
+                        <div style="color: white; font-size: 18px; font-weight: 600;" id="chatRoomName"></div>
+                    </div>
+                    <div class="room-actions">
+    <button onclick="showRoomSettings()" class="settings-btn" id="roomSettingsBtn" title="Настройки комнаты" style="display: none;">
+        <i class="fas fa-cog"></i> Настройки
+    </button>
+    <button onclick="showInviteModal()" class="invite-btn" title="Пригласить">
+        <i class="fas fa-user-plus"></i> Пригласить
+    </button>
+    <button onclick="leaveToRooms()" class="leave-room-btn" title="Выйти из комнаты">
+        <i class="fas fa-sign-out-alt"></i> Выйти
+    </button>
+</div>
+                </div>
+            </div>
+            <div class="chat-main">
+                <div class="chat-header">
+                    <div># <span id="chatRoomTitle"></span></div>
+                    <div><i class="fas fa-users"></i> <span id="chatUserCount">0</span></div>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <button onclick="document.getElementById('fileInput').click()" class="attach-btn" title="Прикрепить файл">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" style="display: none" multiple>
+                    <input type="text" id="chatInput" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    <div id="createRoomModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Создать чат</h3><button onclick="closeCreateRoomModal()" class="close-btn">&times;</button></div>
+            <div class="input-group"><input type="text" id="newRoomName" placeholder="Название комнаты"></div>
+            <div class="input-group"><input type="password" id="newRoomPassword" placeholder="Пароль комнаты"></div>
+            <button onclick="createNewRoom()" class="btn btn-primary">Создать</button>
+        </div>
+    </div>
+
+    <div id="joinRoomModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Вход в чат</h3><button onclick="closeJoinRoomModal()" class="close-btn">&times;</button></div>
+            <p id="joinRoomNameText" style="color: white; margin-bottom: 15px;"></p>
+            <div class="input-group"><input type="password" id="roomPassword" placeholder="Пароль комнаты"></div>
+            <button onclick="joinSelectedRoom()" class="btn btn-primary">Войти</button>
+        </div>
+    </div>
+
+    <div id="editProfileModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Редактировать профиль</h3><button onclick="closeEditProfileModal()" class="close-btn">&times;</button></div>
+            <div class="avatar-upload" style="text-align: center; margin-bottom: 20px;">
+                <div class="avatar-preview" onclick="document.getElementById('avatarInput').click()" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #3a8c3a, #4aac4a); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; cursor: pointer; overflow: hidden;">
+                    <img id="editAvatarPreview" src="/static/default-avatar.png" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <input type="file" id="avatarInput" accept="image/*" style="display: none">
+                <label for="avatarInput" style="background: rgba(74,172,74,0.2); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 12px; color: white;">Загрузить аватар</label>
+            </div>
+            <div class="input-group"><input type="text" id="editDisplayName" placeholder="Отображаемое имя"></div>
+            <div class="input-group"><input type="date" id="editBirthDate" placeholder="Дата рождения"></div>
+            <button onclick="saveProfile()" class="btn btn-primary">Сохранить</button>
+        </div>
+    </div>
+
+    <div id="inviteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> Пригласить участников</h3>
+                <button onclick="closeInviteModal()" class="close-btn">&times;</button>
+            </div>
+            <p style="color: white; margin-bottom: 10px;">Отправьте эту ссылку друзьям:</p>
+            <div class="invite-link-container">
+                <input type="text" id="inviteLinkInput" readonly style="width: 100%; padding: 10px; border-radius: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(74,172,74,0.4); color: white; margin-bottom: 15px;">
+                <button onclick="copyInviteLink()" class="btn btn-primary" style="width: 100%;">📋 Скопировать ссылку</button>
+            </div>
+            <p style="color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 15px; text-align: center;">
+                По ссылке нужно будет ввести пароль комнаты
+            </p>
+        </div>
+    </div>
+
+    <!-- Модальное окно настроек комнаты -->
+    <div id="roomSettingsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 400px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Настройки комнаты</h3>
+                <button onclick="closeRoomSettings()" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-section">
+                <h4><i class="fas fa-info-circle"></i> Информация</h4>
+                <p><strong>Название:</strong> <span id="settingsRoomName"></span></p>
+                <p><strong>Создатель:</strong> <span id="settingsRoomCreator"></span></p>
+                <p><strong>Участников:</strong> <span id="settingsMemberCount"></span></p>
+                <p><strong>ID комнаты:</strong> <span id="settingsRoomId"></span></p>
+            </div>
+            <div class="settings-section">
+                <h4><i class="fas fa-edit"></i> Изменить название</h4>
+                <div class="input-group">
+                    <input type="text" id="editRoomName" placeholder="Новое название комнаты">
+                </div>
+                <button onclick="renameRoom()" class="btn btn-primary">Изменить название</button>
+            </div>
+            <div class="settings-section">
+                <h4><i class="fas fa-users"></i> Участники</h4>
+                <div id="roomMembersList" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+            <div class="settings-section danger-section" id="deleteRoomSection">
+                <h4><i class="fas fa-exclamation-triangle"></i> Опасная зона</h4>
+                <p>Удаление комнаты приведёт к безвозвратной потере всех сообщений.</p>
+                <button onclick="confirmDeleteRoom()" class="danger-btn">
+                    <i class="fas fa-trash-alt"></i> Удалить комнату
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div id="confirmDeleteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Подтверждение удаления</h3>
+                <button onclick="closeConfirmDelete()" class="close-btn">&times;</button>
+            </div>
+            <p>Вы уверены, что хотите удалить комнату <strong id="deleteRoomName"></strong>?</p>
+            <p style="color: #ff6b6b; font-size: 14px;">Это действие необратимо! Все сообщения будут потеряны.</p>
+            <div class="modal-buttons">
+                <button onclick="closeConfirmDelete()" class="secondary-btn">Отмена</button>
+                <button onclick="deleteRoom()" class="danger-btn">Да, удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для просмотра изображения -->
+    <div id="imageViewerModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 90%; width: auto; background: transparent; box-shadow: none;">
+            <button onclick="closeImageViewer()" class="close-btn" style="position: absolute; top: 20px; right: 30px; background: rgba(0,0,0,0.5); border-radius: 50%; width: 40px; height: 40px;">&times;</button>
+            <img id="viewerImage" src="" style="max-width: 90vw; max-height: 80vh; border-radius: 16px;">
+        </div>
+    </div>
+
+    <audio id="notificationSound"><source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg"></audio>
+        <script src="/static/script.js?v=3"></script>
+</body>
+</html>
